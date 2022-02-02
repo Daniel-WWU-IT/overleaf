@@ -1,0 +1,10 @@
+#!/usr/bin/python3
+import time
+
+print("Welcome to this test!")
+i = 1
+while i > 0:
+    with open("/tmp/test", "a") as f:
+        f.write(str(i) + "\n")
+    i += 1
+    time.sleep(5)
