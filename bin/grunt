@@ -12,6 +12,10 @@ case "$TASK" in
     node create-user --admin "$@"
     ;;
 
+  user:create)
+    node create-user "$@"
+    ;;
+
   user:delete)
     node delete-user "$@"
     ;;
