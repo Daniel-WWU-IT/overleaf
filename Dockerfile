@@ -5,6 +5,11 @@
 ARG SHARELATEX_BASE_TAG=sharelatex/sharelatex-base:latest
 FROM $SHARELATEX_BASE_TAG
 
+# Install pip and Flask
+RUN apt-get update \
+&&  apt-get install -y python3-pip \
+&&  python3 -m pip install Flask
+
 WORKDIR /var/www/sharelatex
 
 # Add required source files
@@ -83,4 +88,3 @@ EXPOSE 80
 WORKDIR /
 
 ENTRYPOINT ["/sbin/my_init"]
-
