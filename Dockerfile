@@ -8,7 +8,7 @@ FROM $SHARELATEX_BASE_TAG
 # Install pip and Flask
 RUN apt-get update \
 &&  apt-get install -y python3-pip \
-&&  python3 -m pip install Flask
+&&  python3 -m pip install Flask requests
 
 WORKDIR /var/www/sharelatex
 
