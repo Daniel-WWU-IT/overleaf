@@ -8,6 +8,11 @@ app = Flask(__name__)
 client = requests.session()
 
 
+def _error(msg, code=500):
+    app.logger.error(msg)
+    abort(code)
+
+
 def extract_auth_tokens(link):
     response = client.get(link)
 
@@ -36,12 +41,12 @@ def perform_login(email, password):
 def create_user():
     email = request.args.get('email', '')
     if email == '':
-        abort(400)
+        _error('Email address missing', 400)
     password = request.args.get('password', '')
 
     result = subprocess.run(['grunt', 'user:create', '--email=' + email], universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if result.returncode != 0:
-        abort(500)
+        _error('Creating the user account failed (process error)')
 
     try:
         output = str(result.stdout)
@@ -55,29 +60,34 @@ def create_user():
             return redirect('/login', code=302)
         else:
             return '<a href="' + link + '">' + escape(link) + '</a>'
-    except:
-        abort(503)
+    except BaseException as e:
+        _error('Creating a user resulted in an exception: ' + str(e))
 
 
 def login():
     email = request.args.get('email', '')
     password = request.args.get('password', '')
     if email == '' or password == '':
-        abort(400)
+        _error('Login: Email or password missing', 400)
 
     try:
+        response = make_response(redirect('/project', code=302))
+
         login = perform_login(email, password)
 
-        response = make_response(redirect('/project', code=302))
+        # Copy all Sharelatex-specific headers and cookies
         for key in login.headers:
-            response.headers[key] = login.headers[key]
+            if 'sharelatex' in key.casefold():
+                response.headers[key] = login.headers[key]
+                
         cookies = login.cookies.get_dict('localhost.local')
         for key in cookies:
-            response.set_cookie(key, cookies[key])
+            if 'sharelatex' in key.casefold():
+                response.set_cookie(key, cookies[key])
 
         return response
-    except:
-        abort(503)
+    except BaseException as e:
+        _error('Logging in a user resulted in an exception: ' + str(e))
 
 
 @app.route("/")
@@ -92,4 +102,4 @@ def regsvc():
         create_user()
         return login()
     else:
-        abort(404)
+        _error('Unknown action', 404)
