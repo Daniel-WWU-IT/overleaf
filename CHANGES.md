@@ -15,6 +15,7 @@
           ;;
         ```
       to create regular users via command-line
+- Add `proxy_hide_header X-Frame-Options;` to `nginx/sharelatex.conf` for locations `/` and `/socket.io` to allow iframe embedding
 
 # How to use
 A new service called `regsvc` will be launched within the container; it can be reached at the `/regsvc` endpoint.
