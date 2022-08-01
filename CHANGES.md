@@ -19,14 +19,17 @@
 # How to use
 A new service called `regsvc` will be launched within the container; it can be reached at the `/regsvc` endpoint.
 
-To create a new user, issue the following `GET` request:
-```
-https://mydomain.com/regsvc?email=my@mail.com
-```
-An activation link will be shown once the account has been created.
+The service provides various actions, specified through the `action` parameter:
 
-It is also possible to directly set a password, circumventing the activation step:
+| Action | Description                                                                                                        | Parameters                                                                                             |
+| --- |--------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| `create` | Creates a new user; if a user with the specified email already exists, nothing happens                             | `email` - The user's email address (= username)<br/> `password` - Optionally sets the account password |
+| `login` | Logs the specified in; this will also redirect to the main Overleaf page                                           | `email` - The user's email address <br/> `password` - The user's password                              |
+| `create-and-login` | Combines the actions `create` and `login`: The user is created if it doesn't exist yet and is logged in afterwards | `email` - The user's email address <br/> `password` - The user's password                                                                                              |
+
+An example `GET` request to this service could look like this:
 ```
-https://mydomain.com/regsvc?email=my@mail.com&password=mypassword
+https://mydomain.com/regsvc?action=create&email=my@mail.com&password=mypass
 ```
-This will redirect to the Overleaf login page after the account has been created.
+
+Note that leaving out the `action` parameter will default to `create-and-login`.
