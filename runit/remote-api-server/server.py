@@ -1,4 +1,4 @@
-import subprocess, re, requests
+import subprocess, re, requests, os, fnmatch
 from flask import *
 from urllib.parse import urlparse, parse_qs
 from html import escape
@@ -79,7 +79,7 @@ def login():
         for key in login.headers:
             if 'sharelatex' in key.casefold():
                 response.headers[key] = login.headers[key]
-                
+
         cookies = login.cookies.get_dict('localhost.local')
         for key in cookies:
             if 'sharelatex' in key.casefold():
@@ -90,10 +90,22 @@ def login():
         _error('Logging in a user resulted in an exception: ' + str(e))
 
 
+@app.before_request
+def verify_client():
+    # Allowed remote addresses are passed via the env variable REMOTE_API_ALLOWED_CLIENTS; wildcards are supported
+    allowed_clients = os.getenv('REMOTE_API_ALLOWED_CLIENTS', '')
+
+    # Only let requests from allowed remote addresses through
+    for allowed_client in [s.strip() for s in allowed_clients.split(',')]:
+        if fnmatch.fnmatchcase(request.remote_addr.casefold(), allowed_client.casefold()):
+            break
+    else:
+        _error(f'Request from {request.remote_addr} is not allowed', 503)
+
+
 @app.route("/")
 def regsvc():
     action = request.args.get('action', 'create-and-login')
-
     if action.casefold() == 'create':
         return create_user()
     elif action.casefold() == 'login':
