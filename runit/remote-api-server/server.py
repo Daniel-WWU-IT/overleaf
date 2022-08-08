@@ -121,7 +121,7 @@ def open_projects(data_enc_key):
 
     try:
         req_data = json.loads(data)
-        response = make_response(redirect('/project', code=302))
+        response = make_response(redirect(os.getenv('SHARELATEX_SITE_URL', '').rstrip('/') + '/project', code=302))
 
         # Copy all specified headers and cookies into the request
         for key in req_data['headers']:
