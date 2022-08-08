@@ -35,3 +35,11 @@ https://mydomain.com/regsvc?action=create&email=my@mail.com&password=mypass
 ```
 
 Note that leaving out the `action` parameter will default to `create-and-login`.
+
+## Configuration
+The `regsvc` service can be configured by setting various environment variables:
+
+| Variable | Description | Default |
+| --- | --- | --- |
+| `REMOTE_API_DATA_KEY` | This key is used to encrypt login data; the key _must_ have a length of 32 characters and is mandatory | `""` |
+| `REMOTE_API_ALLOWED_CLIENTS` | If set, only the specified clients are allowed to issue requests; wildcards are supported | `""` |

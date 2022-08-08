@@ -1,5 +1,6 @@
-import subprocess, re, requests, os, fnmatch
+import subprocess, re, requests, os, fnmatch, base64
 from flask import *
+from cryptography.fernet import Fernet
 from urllib.parse import urlparse, parse_qs
 from html import escape
 
@@ -8,19 +9,34 @@ app = Flask(__name__)
 client = requests.session()
 
 
-def _dataResponse(data={}, encrypt=False, code=200):
+# Cryptography functions
+def _encrypt_data(data, key):
+    fernet = Fernet(key)
+    return fernet.encrypt(data.encode())
+
+
+def _decrypt_data(data, key):
+    fernet = Fernet(key)
+    return fernet.decrypt(data.encode()).decode()
+
+
+# Response helpers
+def _data_response(data={}, data_key=''):
+    json_data = json.dumps(data)
     resp = app.response_class(
-        response=json.dumps(data),
-        status=code,
+        response=_encrypt_data(json_data, data_key) if data_key != '' else json_data,
+        status=200,
         mimetype='application/json'
     )
     return resp
+
 
 def _error(msg, code=500):
     app.logger.error(msg)
     abort(code)
 
 
+# Main functions
 def extract_auth_tokens(link):
     response = client.get(link)
 
@@ -65,14 +81,14 @@ def create_user():
         if password != '':
             link = urlparse(link)._replace(netloc='localhost')._replace(scheme='http').geturl()
             set_password(link, password)
-            return _dataResponse()
+            return _data_response()
         else:
-          return _dataResponse({'url': link})
+          return _data_response({'url': link})
     except BaseException as e:
         _error('Creating a user resulted in an exception: ' + str(e))
 
 
-def login():
+def login(data_enc_key):
     email = request.args.get('email', '')
     password = request.args.get('password', '')
     if email == '' or password == '':
@@ -92,15 +108,16 @@ def login():
             if 'sharelatex' in key.casefold():
                 data['cookies'][key] = cookies[key]
 
-        return _dataResponse(data, True)
+        return _data_response(data, data_enc_key)
     except BaseException as e:
         _error('Logging in a user resulted in an exception: ' + str(e))
 
 
-def open_projects():
+def open_projects(data_enc_key):
     data = request.args.get('data', '')
     if data == '':
         _error('Open: Data missing', 400)
+    data = _decrypt_data(data, data_enc_key)
 
     try:
         req_data = json.loads(data)
@@ -118,6 +135,7 @@ def open_projects():
         _error('Opening the projects resulted in an exception: ' + str(e))
 
 
+# App routing
 @app.before_request
 def verify_client():
     # Allowed remote addresses are passed via the env variable REMOTE_API_ALLOWED_CLIENTS; wildcards are supported
@@ -133,15 +151,21 @@ def verify_client():
 
 @app.route("/")
 def regsvc():
+    # Get the key used to encrypt login data; specifying this is mandatory
+    data_enc_key = os.getenv('REMOTE_API_DATA_KEY', '')
+    if data_enc_key == '':
+        _error('No data key set', 500)
+    data_enc_key = base64.b64encode(data_enc_key.encode()) # Required by Fernet
+
     action = request.args.get('action', 'create-and-login')
     if action.casefold() == 'create':
         return create_user()
     elif action.casefold() == 'login':
-        return login()
+        return login(data_enc_key)
     elif action.casefold() == 'create-and-login':
         create_user()
-        return login()
+        return login(data_enc_key)
     elif action.casefold() == 'open-projects':
-        return open_projects()
+        return open_projects(data_enc_key)
     else:
         _error('Unknown action', 404)
