@@ -8,6 +8,14 @@ app = Flask(__name__)
 client = requests.session()
 
 
+def _dataResponse(data={}, encrypt=False, code=200):
+    resp = app.response_class(
+        response=json.dumps(data),
+        status=code,
+        mimetype='application/json'
+    )
+    return resp
+
 def _error(msg, code=500):
     app.logger.error(msg)
     abort(code)
@@ -57,9 +65,9 @@ def create_user():
         if password != '':
             link = urlparse(link)._replace(netloc='localhost')._replace(scheme='http').geturl()
             set_password(link, password)
-            return redirect('/login', code=302)
+            return _dataResponse()
         else:
-            return '<a href="' + link + '">' + escape(link) + '</a>'
+          return _dataResponse({'url': link})
     except BaseException as e:
         _error('Creating a user resulted in an exception: ' + str(e))
 
@@ -71,23 +79,43 @@ def login():
         _error('Login: Email or password missing', 400)
 
     try:
-        response = make_response(redirect('/project', code=302))
-
         login = perform_login(email, password)
 
-        # Copy all Sharelatex-specific headers and cookies
+        # Get all Sharelatex-specific headers and cookies
+        data = {'headers': {}, 'cookies': {}}
         for key in login.headers:
             if 'sharelatex' in key.casefold():
-                response.headers[key] = login.headers[key]
+                data['headers'][key] = login.headers[key]
 
         cookies = login.cookies.get_dict('localhost.local')
         for key in cookies:
             if 'sharelatex' in key.casefold():
-                response.set_cookie(key, cookies[key])
+                data['cookies'][key] = cookies[key]
+
+        return _dataResponse(data, True)
+    except BaseException as e:
+        _error('Logging in a user resulted in an exception: ' + str(e))
+
+
+def open_projects():
+    data = request.args.get('data', '')
+    if data == '':
+        _error('Open: Data missing', 400)
+
+    try:
+        req_data = json.loads(data)
+        response = make_response(redirect('/project', code=302))
+
+        # Copy all specified headers and cookies into the request
+        for key in req_data['headers']:
+            response.headers[key] = req_data['headers'][key]
+
+        for key in req_data['cookies']:
+            response.set_cookie(key, req_data['cookies'][key])
 
         return response
     except BaseException as e:
-        _error('Logging in a user resulted in an exception: ' + str(e))
+        _error('Opening the projects resulted in an exception: ' + str(e))
 
 
 @app.before_request
@@ -113,5 +141,7 @@ def regsvc():
     elif action.casefold() == 'create-and-login':
         create_user()
         return login()
+    elif action.casefold() == 'open-projects':
+        return open_projects()
     else:
         _error('Unknown action', 404)
