@@ -128,7 +128,7 @@ def open_projects(data_enc_key):
             response.headers[key] = req_data['headers'][key]
 
         for key in req_data['cookies']:
-            response.set_cookie(key, req_data['cookies'][key])
+            response.set_cookie(key, req_data['cookies'][key], samesite='None', secure=True)
 
         return response
     except BaseException as e:
