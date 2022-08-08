@@ -135,6 +135,17 @@ def open_projects(data_enc_key):
         _error('Opening the projects resulted in an exception: ' + str(e))
 
 
+# API key handling
+def verify_api_key():
+    api_key = os.getenv('REMOTE_API_KEY', '')
+    if api_key == '':
+        _error('No API key set', 500)
+
+    req_key = request.args.get('apikey', '')
+    if req_key != api_key:
+        _error('Invalid API key specified', 503)
+
+
 # App routing
 @app.before_request
 def verify_client():
@@ -159,13 +170,17 @@ def regsvc():
 
     action = request.args.get('action', 'create-and-login')
     if action.casefold() == 'create':
+        verify_api_key()
         return create_user()
     elif action.casefold() == 'login':
+        verify_api_key()
         return login(data_enc_key)
     elif action.casefold() == 'create-and-login':
+        verify_api_key()
         create_user()
         return login(data_enc_key)
     elif action.casefold() == 'open-projects':
+        # This EP is public
         return open_projects(data_enc_key)
     else:
         _error('Unknown action', 404)
