@@ -22,11 +22,12 @@ A new service called `regsvc` will be launched within the container; it can be r
 
 The service provides various actions, specified through the `action` parameter:
 
-| Action | Description                                                                                                        | Parameters                                                                                             |
-| --- |--------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
-| `create` | Creates a new user; if a user with the specified email already exists, nothing happens                             | `email` - The user's email address (= username)<br/> `password` - Optionally sets the account password |
-| `login` | Logs the specified in; this will also redirect to the main Overleaf page                                           | `email` - The user's email address <br/> `password` - The user's password                              |
-| `create-and-login` | Combines the actions `create` and `login`: The user is created if it doesn't exist yet and is logged in afterwards | `email` - The user's email address <br/> `password` - The user's password                                                                                              |
+| Action | Description                                                                                                                                                                 | Parameters                                                                                             |
+| --- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| `create` | Creates a new user; if a user with the specified email already exists, nothing happens                                                                                      | `email` - The user's email address (= username)<br/> `password` - Optionally sets the account password |
+| `login` | Logs the specified in; this will return a link that can be followed afterwards                                                                                              | `email` - The user's email address <br/> `password` - The user's password                              |
+| `create-and-login` | Combines the actions `create` and `login`: The user is created if it doesn't exist yet and is logged in afterwards; the returned data can be used to open the projects page | `email` - The user's email address <br/> `password` - The user's password                              |
+| `open-projects` | Redirects to the projects page after a user has been logged in                                                                                                              | `data` - The data returned by a previous login call                                                    |
 
 An example `GET` request to this service could look like this:
 ```
