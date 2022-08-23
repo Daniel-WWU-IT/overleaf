@@ -29,9 +29,11 @@ The service provides various actions, specified through the `action` parameter:
 | `create-and-login` | Combines the actions `create` and `login`: The user is created if it doesn't exist yet and is logged in afterwards; the returned data can be used to open the projects page | `email` - The user's email address <br/> `password` - The user's password                              |
 | `open-projects` | Redirects to the projects page after a user has been logged in                                                                                                              | `data` - The data returned by a previous login call                                                    |
 
+For all actions except `open-projects`, an API key needs to be passed via the `apikey` parameter. This needs to match the `REMOTE_API_KEY` environment variable specified during deployment.
+
 An example `GET` request to this service could look like this:
 ```
-https://mydomain.com/regsvc?action=create&email=my@mail.com&password=mypass
+https://mydomain.com/regsvc?action=create&email=my@mail.com&password=mypass&apikey=123key
 ```
 
 Note that leaving out the `action` parameter will default to `create-and-login`.
