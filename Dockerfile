@@ -2,7 +2,7 @@
 # Overleaf Community Edition (overleaf/overleaf)
 # ---------------------------------------------
 
-ARG SHARELATEX_BASE_TAG=sharelatex/sharelatex-base:latest
+ARG SHARELATEX_BASE_TAG=sharelatex/sharelatex-base:2.7.0
 FROM $SHARELATEX_BASE_TAG
 
 # Install pip and Flask
