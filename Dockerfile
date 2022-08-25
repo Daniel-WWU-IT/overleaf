@@ -6,6 +6,7 @@ ARG SHARELATEX_BASE_TAG=sharelatex/sharelatex-base:2.7.0
 FROM $SHARELATEX_BASE_TAG
 
 # Install pip and Flask
+# ---------------------
 RUN apt-get update \
 &&  apt-get install -y python3-pip \
 &&  python3 -m pip install Flask requests cryptography
@@ -72,16 +73,19 @@ COPY ${baseDir}/settings.js /etc/sharelatex/settings.js
 ADD ${baseDir}/bin/grunt /usr/local/bin/grunt
 RUN chmod +x /usr/local/bin/grunt
 
+# Update TeXLive and install additional packages
+# ----------------------------------------------
+RUN tlmgr option repository ftp://ftp.tu-chemnitz.de/pub/tug/historic/systems/texlive/2021/tlnet-final \
+&&  tlmgr update --self \
+&&  tlmgr update --all \
+&&  tlmgr install xcolor
+
 # Set Environment Variables
 # --------------------------------
 ENV SHARELATEX_CONFIG /etc/sharelatex/settings.js
-
 ENV WEB_API_USER "sharelatex"
-
 ENV SHARELATEX_APP_NAME "Overleaf Community Edition"
-
 ENV OPTIMISE_PDF "true"
-
 
 EXPOSE 80
 
