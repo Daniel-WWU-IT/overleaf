@@ -43,7 +43,7 @@ RUN chmod +x /usr/bin/envsubst
 # # docker build \
 #     --build-arg TEXLIVE_MIRROR=http://ctan.crest.fr/tex-archive/systems/texlive/tlnet \
 #     -f Dockerfile-base -t sharelatex/sharelatex-base .
-ARG TEXLIVE_MIRROR=http://mirror.ctan.org/systems/texlive/tlnet
+ARG TEXLIVE_MIRROR=ftp://ftp.tu-chemnitz.de/pub/tug/historic/systems/texlive/2021/tlnet-final
 
 ENV PATH "${PATH}:/usr/local/texlive/2021/bin/x86_64-linux"
 
@@ -55,7 +55,7 @@ RUN mkdir /install-tl-unx \
 &&  echo "tlpdbopt_autobackup 0" >> /install-tl-unx/texlive.profile \
 &&  echo "tlpdbopt_install_docfiles 0" >> /install-tl-unx/texlive.profile \
 &&  echo "tlpdbopt_install_srcfiles 0" >> /install-tl-unx/texlive.profile \
-&&  echo "selected_scheme scheme-basic" >> /install-tl-unx/texlive.profile \
+&&  echo "selected_scheme scheme-full" >> /install-tl-unx/texlive.profile \
     \
 &&  /install-tl-unx/install-tl \
       -profile /install-tl-unx/texlive.profile \
@@ -67,6 +67,11 @@ RUN mkdir /install-tl-unx \
     \
 &&  rm -rf /install-tl-unx
 
+# Update Texlive
+# --------------
+RUN tlmgr option repository ftp://ftp.tu-chemnitz.de/pub/tug/historic/systems/texlive/2021/tlnet-final \
+&&  tlmgr update --self \
+&&  tlmgr update --all
 
 # Set up sharelatex user and home directory
 # -----------------------------------------

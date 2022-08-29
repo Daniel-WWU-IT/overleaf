@@ -1,17 +1,21 @@
 # Changes applied to this container
-- Install pip and some Python modules in the container by adding the following to `Dockerfile`:
-    ```
-    RUN apt-get update \
-    &&  apt-get install -y python3-pip \
-    &&  python3 -m pip install Flask requests
-    ```
-- Update TeXLive and install additional packages by adding the following to `Dockerfile`:
-    ```
-    RUN tlmgr option repository ftp://ftp.tu-chemnitz.de/pub/tug/historic/systems/texlive/2021/tlnet-final \
-    &&  tlmgr update --self \
-    &&  tlmgr update --all \
-    &&  tlmgr install xcolor
-    ```
+- Build custom base image to use the full Texlive distribution by applying the following changes to `Dockerfile-base`:
+    - Use `TEXLIVE_MIRROR=ftp://ftp.tu-chemnitz.de/pub/tug/historic/systems/texlive/2021/tlnet-final`
+    - Set `selected_scheme` to `scheme-full`
+    - Update Texlive:
+      ```
+      RUN tlmgr option repository ftp://ftp.tu-chemnitz.de/pub/tug/historic/systems/texlive/2021/tlnet-final \
+      &&  tlmgr update --self \
+      &&  tlmgr update --all    
+      ```
+- Modifications to the main Docker file `Dockerfile`:
+    - Use the custom base image
+    - Install pip and some Python modules:
+        ```
+        RUN apt-get update \
+        &&  apt-get install -y python3-pip \
+        &&  python3 -m pip install Flask requests
+        ```    
 - Add `runit/remote-api-server/*` as a testing drone
     - Make sure that the `run` file has the executable flag set
 - Modify `bin/grunt` as follows:

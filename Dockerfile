@@ -2,7 +2,9 @@
 # Overleaf Community Edition (overleaf/overleaf)
 # ---------------------------------------------
 
-ARG SHARELATEX_BASE_TAG=sharelatex/sharelatex-base:2.7.0
+# ARG SHARELATEX_BASE_TAG=sharelatex/sharelatex-base:2.7.0
+# Use a custom base image which provides the "full" Texlive distribution
+ARG SHARELATEX_BASE_TAG=omnivox/overleaf-base:latest
 FROM $SHARELATEX_BASE_TAG
 
 # Install pip and Flask
@@ -73,12 +75,9 @@ COPY ${baseDir}/settings.js /etc/sharelatex/settings.js
 ADD ${baseDir}/bin/grunt /usr/local/bin/grunt
 RUN chmod +x /usr/local/bin/grunt
 
-# Update TeXLive and install additional packages
-# ----------------------------------------------
-RUN tlmgr option repository ftp://ftp.tu-chemnitz.de/pub/tug/historic/systems/texlive/2021/tlnet-final \
-&&  tlmgr update --self \
-&&  tlmgr update --all \
-&&  tlmgr install xcolor
+# Add missing TeX packages
+# ------------------------
+# tlmgr install <package>
 
 # Set Environment Variables
 # --------------------------------
