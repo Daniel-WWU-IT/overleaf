@@ -138,6 +138,19 @@ def open_projects(client, data_enc_key):
         _error(client, 'Opening the projects resulted in an exception: ' + str(e))
 
 
+def delete_user(client):
+    email = request.args.get('email', '')
+    if email == '':
+        _error(client, 'Email address missing', 400)
+    
+    result = subprocess.run(['grunt', 'user:delete', '--email=' + email])
+    if result.returncode != 0:
+        _error(client, 'Deleting the user account failed (process error)')
+    
+    # We just assume that deleting the user worked
+    return _data_response()
+    
+
 # API key handling
 def verify_api_key():
     api_key = os.getenv('REMOTE_API_KEY', '')
@@ -194,6 +207,9 @@ def regsvc():
     elif action.casefold() == 'open-projects':
         # This EP is public
         result = open_projects(client, data_enc_key)
+    elif action.casefold() == 'delete':
+        verify_api_key()
+        result = delete_user(client)
     else:
         _error(client, 'Unknown action', 404)
 
