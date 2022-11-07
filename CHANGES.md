@@ -6,7 +6,7 @@
       ```
       RUN tlmgr option repository ftp://ftp.tu-chemnitz.de/pub/tug/historic/systems/texlive/2021/tlnet-final \
       &&  tlmgr update --self \
-      &&  tlmgr update --all    
+      &&  tlmgr update --all
       ```
 - Modifications to the main Docker file `Dockerfile`:
     - Use the custom base image
@@ -15,9 +15,9 @@
         RUN apt-get update \
         &&  apt-get install -y python3-pip \
         &&  python3 -m pip install Flask requests
-        ```    
-- Add `runit/remote-api-server/*` as a testing drone
-    - Make sure that the `run` file has the executable flag set
+        ```
+- Add `runit/remote-api-server` and `runit/reverse-proxy`
+    - Make sure that the `run` files have the executable flag set
 - Modify `bin/grunt` as follows:
     - Add new case entry
         ```
@@ -27,8 +27,10 @@
         ```
       to create regular users via command-line
 - Add `proxy_hide_header X-Frame-Options;` to `nginx/sharelatex.conf` for locations `/` and `/socket.io` to allow iframe embedding
+- Redirect `GET` requests to the reverse proxy service through `nginx/sharelatex.conf` 
 
 # How to use
+## Registration/User management service
 A new service called `regsvc` will be launched within the container; it can be reached at the `/regsvc` endpoint.
 
 The service provides various actions, specified through the `action` parameter:
@@ -49,7 +51,7 @@ https://mydomain.com/regsvc?action=create&email=my@mail.com&password=mypass&apik
 
 Note that leaving out the `action` parameter will default to `create-and-login`.
 
-## Configuration
+### Configuration
 The `regsvc` service can be configured by setting various environment variables:
 
 | Variable | Description                                                                                                | Default |
