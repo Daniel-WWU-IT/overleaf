@@ -4,10 +4,7 @@ import requests, sys
 app = Flask(__name__)
 
 # Route all paths through the proxy
-@app.route('/')
-def index():
-    return redirect()
-
+@app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def proxy(path):
     return redirect()
@@ -22,6 +19,7 @@ def redirect():
 
     excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
     headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
+    
     response = Response(resp.content, resp.status_code, headers)
 
     cookies = resp.cookies.get_dict('localhost.local')
