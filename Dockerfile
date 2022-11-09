@@ -11,7 +11,7 @@ FROM $SHARELATEX_BASE_TAG
 # ---------------------
 RUN apt-get update \
 &&  apt-get install -y python3-pip \
-&&  python3 -m pip install Flask requests cryptography
+&&  python3 -m pip install Flask requests cryptography beautifulsoup4 lxml
 
 WORKDIR /var/www/sharelatex
 

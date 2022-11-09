@@ -14,7 +14,7 @@
         ```
         RUN apt-get update \
         &&  apt-get install -y python3-pip \
-        &&  python3 -m pip install Flask requests
+        &&  python3 -m pip install Flask requests cryptography beautifulsoup4
         ```
 - Add `runit/remote-api-server` and `runit/reverse-proxy`
     - Make sure that the `run` files have the executable flag set
