@@ -16,11 +16,14 @@ def redirect():
                             headers={key: value for (key, value) in request.headers if key != 'Host'},
                             data=request.form.to_dict(),
                             cookies=request.cookies)
+    
+    content = resp.text
+    # TODO: Parse & modify text, depending on the actual location/path
 
     excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
     headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
     
-    response = Response(resp.content, resp.status_code, headers)
+    response = Response(content, resp.status_code, headers)
 
     cookies = resp.cookies.get_dict('localhost.local')
     for key in cookies:
