@@ -6,14 +6,29 @@ import requests, sys
 app = Flask(__name__)
 
 
+# Helpers
+def _appendStyle(tag, style):
+    if tag == None:
+        pass
+    
+    styleNew = style
+    if 'style' in tag and tag['style'] != '':
+        styleNew = tag['style'] + '; ' + style
+    tag['style'] = styleNew
+
+
 # Content modifiers
 def _modifyProjectPage(soup):
-    soup.find(text='Account').find_parent('a')['style'] = 'display: none;'
+    # Hide the 'Account' button
+    liElement = soup.find('li', class_='dropdown', dropdown=True)
+    if liElement and liElement.find('a', class_='dropdown-toggle', attrs={"dropdown-toggle": True}):
+        _appendStyle(liElement, 'display: none;')
 
 
 # Parse and modify the response based on the current path
 def _parseResponse(resp, path):
     modifiers = {
+        '/': _modifyProjectPage,
         '/project': _modifyProjectPage
     }
 
