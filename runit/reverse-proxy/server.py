@@ -1,7 +1,7 @@
 from flask import Flask, request, Response
 from bs4 import BeautifulSoup
 
-import requests, sys
+import re, requests, sys
 
 app = Flask(__name__)
 
@@ -25,21 +25,33 @@ def _modifyProjectPage(soup):
         _appendStyle(liElement, 'display: none;')
 
 
+def _modifyDocumentPage(soup):
+    # Inject the reverse proxy client-side script
+    bodyElement = soup.find('body')
+    if bodyElement:
+        scriptTag = soup.new_tag('script', src='/js/reverse-proxy.js', type='text/javascript')
+        bodyElement.append(scriptTag)
+
+
 # Parse and modify the response based on the current path
 def _parseResponse(resp, path):
     modifiers = {
         '/': _modifyProjectPage,
-        '/project': _modifyProjectPage
+        '/project': _modifyProjectPage,
+        '/project/[0-9A-Fa-f]{24}': _modifyDocumentPage
     }
 
     content = resp.content
-    if path in modifiers:
-        try:
-            soup = BeautifulSoup(resp.text, 'lxml')
-            modifiers[path](soup)
-            content = str(soup)
-        except Exception as e:
-            app.logger.error(f'Handling the content of {path} threw an exception: {e} ({type(e)})')
+    
+    for mod in modifiers:
+        if re.match('^' + mod + '$', path):
+            try:
+                soup = BeautifulSoup(resp.text, 'lxml')
+                modifiers[mod](soup)
+                content = str(soup)
+            except Exception as e:
+                app.logger.error(f'Handling the content of {path} threw an exception: {e} ({type(e)})')
+    
     return content
 
 

@@ -16,6 +16,10 @@
         &&  apt-get install -y python3-pip \
         &&  python3 -m pip install Flask requests cryptography beautifulsoup4
         ```
+    - Add some script files:
+        ```
+        COPY ${baseDir}/runit/reverse-proxy/reverse-proxy.js /var/www/sharelatex/web/public/js
+        ``` 
 - Add `runit/remote-api-server` and `runit/reverse-proxy`
     - Make sure that the `run` files have the executable flag set
 - Modify `bin/grunt` as follows:

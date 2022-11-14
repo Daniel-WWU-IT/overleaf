@@ -79,6 +79,9 @@ RUN chmod +x /usr/local/bin/grunt
 # ------------------------
 # tlmgr install <package>
 
+# Copy reverse proxy scripts
+COPY ${baseDir}/runit/reverse-proxy/reverse-proxy.js /var/www/sharelatex/web/public/js
+
 # Set Environment Variables
 # --------------------------------
 ENV SHARELATEX_CONFIG /etc/sharelatex/settings.js
