@@ -24,7 +24,7 @@ function _addMutationsObserver(element, callback) {
 
 function _mutationsChildListHasChanged(mutations) {
     for (const mutation of mutations) {
-        if (mutation.type === 'childList') {
+        if (mutation.type === "childList") {
             return true;
         }
     }
@@ -32,7 +32,7 @@ function _mutationsChildListHasChanged(mutations) {
 }
 
 // Main hook
-$(window).on('load', function() {
+$(window).on("load", function() {
     // Listen to dynamic DOM changes
     const callback = (mutations, observer) => {
         if (_mutationsChildListHasChanged(mutations)) {
