@@ -24,3 +24,4 @@ db.sqlite
 .DS_Store
 .vagrant
 /build.sh
+/build-base.sh

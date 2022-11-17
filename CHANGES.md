@@ -14,7 +14,7 @@
         ```
         RUN apt-get update \
         &&  apt-get install -y python3-pip \
-        &&  python3 -m pip install Flask requests cryptography beautifulsoup4
+        &&  python3 -m pip install Flask requests cryptography beautifulsoup4 gunicorn
         ```
     - Add some script files:
         ```

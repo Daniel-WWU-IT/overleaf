@@ -7,11 +7,11 @@
 ARG SHARELATEX_BASE_TAG=omnivox/overleaf-base:latest
 FROM $SHARELATEX_BASE_TAG
 
-# Install pip and Flask
-# ---------------------
+# Install pip and some Python modules
+# -----------------------------------
 RUN apt-get update \
 &&  apt-get install -y python3-pip \
-&&  python3 -m pip install Flask requests cryptography beautifulsoup4 lxml
+&&  python3 -m pip install Flask requests cryptography beautifulsoup4 lxml gunicorn
 
 WORKDIR /var/www/sharelatex
 
