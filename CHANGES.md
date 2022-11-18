@@ -31,6 +31,10 @@
         ```
       to create regular users via command-line
 - Add `proxy_hide_header X-Frame-Options;` to `nginx/sharelatex.conf` for locations `/` and `/socket.io` to allow iframe embedding
+- Add the following settings to `settings.js`:
+    ```
+    cookieSessionLength: false,
+    ```
 - Redirect `GET` requests to the reverse proxy service through `nginx/sharelatex.conf` 
 
 # How to use

@@ -265,6 +265,9 @@ const settings = {
   // cookie with a secure flag (recommended).
   secureCookie: process.env.SHARELATEX_SECURE_COOKIE != null,
 
+  // Due to the automatic login system, cookies should only stay as long as the browser session
+  cookieSessionLength: false,
+
   // If you are running ShareLaTeX behind a proxy (like Apache, Nginx, etc)
   // then set this to true to allow it to correctly detect the forwarded IP
   // address and http/https protocol information.
