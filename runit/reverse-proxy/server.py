@@ -43,7 +43,8 @@ def _modifyProjectPage(soup):
     ulElement = soup.find('ul', class_='navbar-right')
     if ulElement:
         menu = _buildMenu(soup, 'Support', [
-            {'title': 'Documentation', 'href': 'https://www.overleaf.com/learn', 'target': '_blank'}
+            {'title': 'Documentation', 'href': 'https://www.overleaf.com/learn', 'target': '_blank'},
+            {'title': 'Contact us', 'href': 'https://hochschulcloud.nrw/de/kontakt', 'target': '_blank'}
         ], is_subdued=True)
         ulElement.insert(0, menu)
     
