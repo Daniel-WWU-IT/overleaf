@@ -21,8 +21,12 @@ def _appendStyle(tag, style):
 def _modifyProjectPage(soup):
     # Hide the 'Account' button
     liElement = soup.find('li', class_='dropdown', dropdown=True)
-    if liElement and liElement.find('a', class_='dropdown-toggle', attrs={"dropdown-toggle": True}):
-        _appendStyle(liElement, 'display: none;')
+    if liElement:
+        ulElement = liElement.find('ul', class_='dropdown-menu')
+        if ulElement:
+            for li in ulElement('li'):
+                if not li.find('div'):
+                    _appendStyle(li, 'display: none;')
 
 
 def _modifyDocumentPage(soup):
