@@ -19,6 +19,16 @@ def _appendStyle(tag, style):
 
 # Content modifiers
 def _modifyProjectPage(soup):
+    # Add a 'Documentation' button
+    ulElement = soup.find('ul', class_='navbar-right')
+    if ulElement:
+        linkTag = soup.new_tag('a', href='https://www.overleaf.com/learn', target='_blank')
+        linkTag.append('Documentation')
+        liTag = soup.new_tag('li')
+        liTag['class'] = 'subdued'
+        liTag.append(linkTag)
+        ulElement.insert(0, liTag)
+    
     # Hide unnecessary items of the 'Account' drop-down
     liElement = soup.find('li', class_='dropdown', dropdown=True)
     if liElement:
@@ -33,8 +43,16 @@ def _modifyDocumentPage(soup):
     # Inject the reverse proxy client-side script
     bodyElement = soup.find('body')
     if bodyElement:
-        scriptTag = soup.new_tag('script', src='/js/reverse-proxy.js', type='text/javascript')
+        scriptTag = soup.new_tag('script', src='/js/reverse-proxy-doc.js', type='text/javascript')
         bodyElement.append(scriptTag)
+        
+        
+def _modifyGenericPage(soup):
+    # Inject the reverse proxy stylesheet
+    bodyElement = soup.find('body')
+    if bodyElement:
+        styleTag = soup.new_tag('link', href='/stylesheets/reverse-proxy.css', rel='stylesheet')
+        bodyElement.append(styleTag)
 
 
 # Parse and modify the response based on the current path
@@ -51,6 +69,7 @@ def _parseResponse(resp, path):
         if re.match('^' + mod + '$', path):
             try:
                 soup = BeautifulSoup(resp.text, 'lxml')
+                _modifyGenericPage(soup)
                 modifiers[mod](soup)
                 content = str(soup)
             except Exception as e:
