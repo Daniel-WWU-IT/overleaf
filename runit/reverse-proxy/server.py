@@ -15,19 +15,37 @@ def _appendStyle(tag, style):
     if 'style' in tag and tag['style'] != '':
         styleNew = tag['style'] + '; ' + style
     tag['style'] = styleNew
+    
+    
+def _buildMenu(soup, title, items, is_subdued=False):
+    linkTag = soup.new_tag('a', attrs={'class': 'dropdown-toggle', 'dropdown-toggle': True, 'href': '', 'aria-haspopup': 'true', 'aria-expanded': 'false'})
+    linkTag.append(title)
+    linkTag.append(soup.new_tag('b', attrs={'class': 'caret'}))
+
+    menuTag = soup.new_tag('ul', attrs={'class': 'dropdown-menu'})
+    for item in items:
+        linkElem = soup.new_tag('a', href=item['href'], target=item['target'])
+        linkElem.append(item['title'])
+        listElem = soup.new_tag('li')
+        listElem.append(linkElem)
+        menuTag.append(listElem)
+        
+    liTag = soup.new_tag('li', dropdown=True)
+    liTag['class'] = 'subdued dropdown' if is_subdued else 'dropdown'
+    liTag.append(linkTag)
+    liTag.append(menuTag)
+    return liTag
 
 
 # Content modifiers
 def _modifyProjectPage(soup):
-    # Add a 'Documentation' button
+    # Add a 'Support' drop-down button
     ulElement = soup.find('ul', class_='navbar-right')
     if ulElement:
-        linkTag = soup.new_tag('a', href='https://www.overleaf.com/learn', target='_blank')
-        linkTag.append('Documentation')
-        liTag = soup.new_tag('li')
-        liTag['class'] = 'subdued'
-        liTag.append(linkTag)
-        ulElement.insert(0, liTag)
+        menu = _buildMenu(soup, 'Support', [
+            {'title': 'Documentation', 'href': 'https://www.overleaf.com/learn', 'target': '_blank'}
+        ], is_subdued=True)
+        ulElement.insert(0, menu)
     
     # Hide unnecessary items of the 'Account' drop-down
     liElement = soup.find('li', class_='dropdown', dropdown=True)
