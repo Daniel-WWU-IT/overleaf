@@ -19,7 +19,7 @@ def _appendStyle(tag, style):
 
 # Content modifiers
 def _modifyProjectPage(soup):
-    # Hide the 'Account' button
+    # Hide unnecessary items of the 'Account' drop-down
     liElement = soup.find('li', class_='dropdown', dropdown=True)
     if liElement:
         ulElement = liElement.find('ul', class_='dropdown-menu')
