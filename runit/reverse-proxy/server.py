@@ -7,6 +7,20 @@ app = Flask(__name__)
 
 
 # Helpers
+def _injectScript(soup, file):
+    bodyElement = soup.find('body')
+    if bodyElement:
+        scriptTag = soup.new_tag('script', src=file, type='text/javascript')
+        bodyElement.append(scriptTag)
+        
+        
+def _injectStylesheet(soup, file):
+    bodyElement = soup.find('body')
+    if bodyElement:
+        styleTag = soup.new_tag('link', href=file, rel='stylesheet')
+        bodyElement.append(styleTag)
+
+        
 def _appendStyle(tag, style):
     if tag == None:
         pass
@@ -24,7 +38,7 @@ def _buildMenu(soup, title, items, is_subdued=False):
 
     menuTag = soup.new_tag('ul', attrs={'class': 'dropdown-menu'})
     for item in items:
-        linkElem = soup.new_tag('a', href=item['href'], target=item['target'])
+        linkElem = soup.new_tag('a', id=item['id'], href=item['href'], target=item['target'])
         linkElem.append(item['title'])
         listElem = soup.new_tag('li')
         listElem.append(linkElem)
@@ -39,12 +53,20 @@ def _buildMenu(soup, title, items, is_subdued=False):
 
 # Content modifiers
 def _modifyProjectPage(soup):
+    # Inject the reverse proxy client-side script
+    _injectScript(soup, '/js/reverse-proxy-proj.js')
+    
+    # Inject the MsgPopup files
+    _injectScript(soup, '/js/jquery-msgpopup.js')
+    _injectStylesheet(soup, '/stylesheets/jquery-msgpopup.css')
+    
     # Add a 'Support' drop-down button
     ulElement = soup.find('ul', class_='navbar-right')
     if ulElement:
         menu = _buildMenu(soup, 'Support', [
-            {'title': 'Documentation', 'href': 'https://www.overleaf.com/learn', 'target': '_blank'},
-            {'title': 'Contact us', 'href': 'https://hochschulcloud.nrw/de/kontakt', 'target': '_blank'}
+            {'id': 'support-info', 'title': 'General information', 'href': '', 'target': '_blank'},
+            {'id': 'support-docs', 'title': 'Documentation', 'href': 'https://www.overleaf.com/learn', 'target': '_blank'},
+            {'id': 'support-contact', 'title': 'Contact us', 'href': 'https://hochschulcloud.nrw/de/kontakt', 'target': '_blank'}
         ], is_subdued=True)
         ulElement.insert(0, menu)
     
@@ -60,18 +82,12 @@ def _modifyProjectPage(soup):
 
 def _modifyDocumentPage(soup):
     # Inject the reverse proxy client-side script
-    bodyElement = soup.find('body')
-    if bodyElement:
-        scriptTag = soup.new_tag('script', src='/js/reverse-proxy-doc.js', type='text/javascript')
-        bodyElement.append(scriptTag)
+    _injectScript(soup, '/js/reverse-proxy-doc.js')
         
         
 def _modifyGenericPage(soup):
     # Inject the reverse proxy stylesheet
-    bodyElement = soup.find('body')
-    if bodyElement:
-        styleTag = soup.new_tag('link', href='/stylesheets/reverse-proxy.css', rel='stylesheet')
-        bodyElement.append(styleTag)
+    _injectStylesheet(soup, '/stylesheets/reverse-proxy.css')
 
 
 # Parse and modify the response based on the current path
