@@ -23,7 +23,7 @@ def _injectStylesheet(soup, file):
         
 def _appendStyle(tag, style):
     if tag == None:
-        pass
+        return
     
     styleNew = style
     if 'style' in tag and tag['style'] != '':
@@ -83,6 +83,11 @@ def _modifyProjectPage(soup):
 def _modifyDocumentPage(soup):
     # Inject the reverse proxy client-side script
     _injectScript(soup, '/js/reverse-proxy-doc.js')
+    
+    
+def _modifyLoginPage(soup):
+    # Inject the reverse proxy client-side script
+    _injectScript(soup, '/js/reverse-proxy-login.js')
         
         
 def _modifyGenericPage(soup):
@@ -95,7 +100,8 @@ def _parseResponse(resp, path):
     modifiers = {
         '/': _modifyProjectPage,
         '/project': _modifyProjectPage,
-        '/project/[0-9A-Fa-f]{24}': _modifyDocumentPage
+        '/project/[0-9A-Fa-f]{24}': _modifyDocumentPage,
+        '/login': _modifyLoginPage,
     }
 
     content = resp.content
