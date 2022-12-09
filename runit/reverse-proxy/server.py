@@ -89,12 +89,13 @@ def _modifyLoginPage(soup):
     # Inject the reverse proxy client-side script
     _injectScript(soup, '/js/reverse-proxy-login.js')
     
-    # Hide the login page
+    # Hide the login page elements
     cardElement = soup.find('div', class_='card')
     if cardElement:
         _appendStyle(cardElement, 'display: none;')
         parent = cardElement.find_parent()
         
+        # Add a new info panel
         h1Element = soup.new_tag('h1', style='text-align: center;')
         h1Element.string = 'Automatic re-login'
         textElement = soup.new_tag('p', style='text-align: center;')
@@ -105,6 +106,10 @@ def _modifyLoginPage(soup):
         cardElement = soup.new_tag('div', class_='card')
         cardElement.append(headerElement)
         parent.append(cardElement)
+
+    ulElement = soup.find('ul', class_='navbar-right')
+    if ulElement:
+        _appendStyle(ulElement, 'display: none;')
         
         
 def _modifyGenericPage(soup):
