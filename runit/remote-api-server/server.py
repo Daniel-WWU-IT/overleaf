@@ -2,7 +2,6 @@ import subprocess, re, requests, os, fnmatch, base64
 from flask import *
 from cryptography.fernet import Fernet
 from urllib.parse import urlparse, parse_qs
-from html import escape
 
 
 app = Flask(__name__)
@@ -32,12 +31,19 @@ def _data_response(data={}, data_key=''):
 
 def _error(client, msg, code=500):
     app.logger.error(msg)
-    client.close()
+    if client is not None:
+        client.close()
     abort(code)
 
 
 def _resolveURL(path):
     return os.getenv('SHARELATEX_SITE_URL', '').rstrip('/') + '/' + path.lstrip('/')
+
+
+def _get_header_password():
+    if 'X-Overleaf-Password' in request.headers:
+        return request.headers['X-Overleaf-Password']
+    return ''
 
 
 # Main functions
@@ -70,7 +76,7 @@ def create_user(client):
     email = request.args.get('email', '')
     if email == '':
         _error(client, 'Email address missing', 400)
-    password = request.args.get('password', '')
+    password = _get_header_password()
 
     result = subprocess.run(['grunt', 'user:create', '--email=' + email], universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if result.returncode != 0:
@@ -93,7 +99,7 @@ def create_user(client):
 
 def login(client, data_enc_key):
     email = request.args.get('email', '')
-    password = request.args.get('password', '')
+    password = _get_header_password()
     if email == '' or password == '':
         _error(client, 'Login: Email or password missing', 400)
 
@@ -152,14 +158,17 @@ def delete_user(client):
     
 
 # API key handling
-def verify_api_key():
+def verify_api_key(client):
     api_key = os.getenv('REMOTE_API_KEY', '')
     if api_key == '':
         _error(client, 'No API key set', 500)
 
-    req_key = request.args.get('apikey', '')
-    if req_key != api_key:
-        _error(client, 'Invalid API key specified', 503)
+    if 'X-Overleaf-Apikey' in request.headers:
+        req_key = request.headers['X-Overleaf-Apikey']
+        if req_key != api_key:
+            _error(client, 'Invalid API key specified', 503)
+    else:
+        _error(client, 'No API key provided', 503)
 
 
 # App routing
@@ -173,7 +182,7 @@ def verify_client():
         if fnmatch.fnmatchcase(request.remote_addr.casefold(), allowed_client.casefold()):
             break
     else:
-        _error(client, f'Request from {request.remote_addr} is not allowed', 503)
+        _error(None, f'Request from {request.remote_addr} is not allowed', 503)
 
 
 @app.route("/")
@@ -195,20 +204,20 @@ def regsvc():
     action = request.args.get('action', 'create-and-login')
     result = None
     if action.casefold() == 'create':
-        verify_api_key()
+        verify_api_key(client)
         result = create_user(client)
     elif action.casefold() == 'login':
-        verify_api_key()
+        verify_api_key(client)
         result = login(client, data_enc_key)
     elif action.casefold() == 'create-and-login':
-        verify_api_key()
+        verify_api_key(client)
         create_user(client)
         result = login(client, data_enc_key)
     elif action.casefold() == 'open-projects':
         # This EP is public
         result = open_projects(client, data_enc_key)
     elif action.casefold() == 'delete':
-        verify_api_key()
+        verify_api_key(client)
         result = delete_user(client)
     else:
         _error(client, 'Unknown action', 404)
