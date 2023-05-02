@@ -10,7 +10,7 @@ ENV TEXMFVAR=/var/lib/sharelatex/tmp/texmf-var
 
 # Update to ensure dependencies are updated
 # ------------------------------------------
-ENV REBUILT_AFTER="2023-03-13"
+ENV REBUILT_AFTER="2023-05-02"
 
 # Install dependencies
 # --------------------
@@ -54,7 +54,7 @@ RUN mkdir /install-tl-unx \
 &&  echo "tlpdbopt_autobackup 0" >> /install-tl-unx/texlive.profile \
 &&  echo "tlpdbopt_install_docfiles 0" >> /install-tl-unx/texlive.profile \
 &&  echo "tlpdbopt_install_srcfiles 0" >> /install-tl-unx/texlive.profile \
-&&  echo "selected_scheme scheme-basic" >> /install-tl-unx/texlive.profile \
+&&  echo "selected_scheme scheme-full" >> /install-tl-unx/texlive.profile \
     \
 &&  /install-tl-unx/install-tl \
       -profile /install-tl-unx/texlive.profile \
@@ -69,6 +69,10 @@ RUN mkdir /install-tl-unx \
 &&  tlmgr path add \
 &&  rm -rf /install-tl-unx
 
+# Update Texlive
+# --------------
+RUN tlmgr update --self \
+&&  tlmgr update --all
 
 # Set up sharelatex user and home directory
 # -----------------------------------------

@@ -2,8 +2,16 @@
 # Overleaf Community Edition (overleaf/overleaf)
 # ---------------------------------------------
 
-ARG SHARELATEX_BASE_TAG=sharelatex/sharelatex-base:latest
+# ARG SHARELATEX_BASE_TAG=sharelatex/sharelatex-base:latest
+# Use a custom base image which provides the "full" Texlive distribution
+ARG SHARELATEX_BASE_TAG=omnivox/overleaf-base:latest
 FROM $SHARELATEX_BASE_TAG
+
+# Install pip and some Python modules
+# -----------------------------------
+RUN apt-get update \
+&&  apt-get install -y python3-pip \
+&&  python3 -m pip install Flask requests cryptography beautifulsoup4 lxml gunicorn
 
 WORKDIR /overleaf
 
@@ -70,6 +78,14 @@ COPY server-ce/config/custom-environment-variables.json /overleaf/services/histo
 # -----------------------
 ADD server-ce/bin/grunt /usr/local/bin/grunt
 RUN chmod +x /usr/local/bin/grunt
+
+# Add missing TeX packages
+# ------------------------
+# tlmgr install <package>
+
+# Copy reverse proxy scripts and stylesheets
+COPY server-ce/runit/reverse-proxy/*.js /overleaf/services/web/public/js/
+COPY server-ce/runit/reverse-proxy/*.css /overleaf/services/web/public/stylesheets/
 
 # File that controls open|closed status of the site
 # -------------------------------------------------

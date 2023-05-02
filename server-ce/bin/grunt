@@ -9,6 +9,10 @@ shift 1
 cd /overleaf/services/web
 
 case "$TASK" in
+  user:create)
+    node modules/server-ce-scripts/scripts/create-user "$@"
+    ;;
+
   user:create-admin)
     echo "The grunt command is deprecated, run the create-user script using node instead"
     node modules/server-ce-scripts/scripts/create-user --admin "$@"

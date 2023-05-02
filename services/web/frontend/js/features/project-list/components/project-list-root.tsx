@@ -58,7 +58,7 @@ function ProjectListPageContent() {
     <>
       <SystemMessages />
       <div className="project-list-wrapper clearfix">
-        {totalProjectsCount > 0 ? (
+        {totalProjectsCount >= 0 ? (
           <>
             <Sidebar />
             <div className="project-list-main-react">
