@@ -30,10 +30,12 @@
         ```
       to create regular users via command-line
 - Add `proxy_hide_header X-Frame-Options;` to `server-ce/nginx/sharelatex.conf` for locations `/` and `/socket.io` to allow iframe embedding
-- Add the following setting to `server-ce/config/settings.js`:
-    ```
-    cookieSessionLength: false,
-    ```
+- Make the following modifcations in `server-ce/config/settings.js`:
+  - Add the following setting:
+        ```
+        cookieSessionLength: false,
+        ```
+  - Modify the compile timeout `defaultFeatures.compileTimeout` as needed
 - Redirect `GET` requests to the reverse proxy service through `server-ce/nginx/sharelatex.conf` by adding the following to the `/` location:
     ```
     if ($request_method = GET) {

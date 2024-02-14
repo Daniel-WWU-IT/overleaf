@@ -285,7 +285,7 @@ const settings = {
     collaborators: -1,
     dropbox: true,
     versioning: true,
-    compileTimeout: parseIntOrFail(process.env.COMPILE_TIMEOUT || 180),
+    compileTimeout: 900,
     compileGroup: 'standard',
     trackChanges: true,
     templates: true,
