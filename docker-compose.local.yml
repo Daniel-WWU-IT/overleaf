@@ -114,6 +114,7 @@ services:
         restart: always
         image: mongo:4.4
         container_name: mongo
+        command: mongod --quiet --logpath /dev/null
         expose:
             - 27017
         volumes:

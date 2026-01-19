@@ -1,4 +1,4 @@
-import subprocess, re, requests, os, fnmatch, base64
+import subprocess, re, requests, os, fnmatch, base64, json
 from flask import *
 from cryptography.fernet import Fernet
 from urllib.parse import urlparse, parse_qs
@@ -148,14 +148,14 @@ def delete_user(client):
     email = request.args.get('email', '')
     if email == '':
         _error(client, 'Email address missing', 400)
-    
+
     result = subprocess.run(['grunt', 'user:delete', '--email=' + email])
     if result.returncode != 0:
         _error(client, 'Deleting the user account failed (process error)')
-    
+
     # We just assume that deleting the user worked
     return _data_response()
-    
+
 
 # API key handling
 def verify_api_key(client):
