@@ -47,11 +47,11 @@ services:
             # see https://github.com/overleaf/overleaf/issues/695
             TEXMFVAR: /var/lib/sharelatex/tmp/texmf-var
 
-            SHARELATEX_SESSION_SECRET: 'notyourbusiness'
+            SHARELATEX_SESSION_SECRET: 'iYmZUouDPl3zEahNVM0m5N2kavSsfQIT'
 
-            REMOTE_API_KEY: 'verysecretlol'
+            REMOTE_API_KEY: 'F18KiFG6gStOav5UzdH9eIke7taCSqGx'
             REMOTE_API_ALLOWED_CLIENTS: '*'
-            REMOTE_API_DATA_KEY: 'alsosecret'
+            REMOTE_API_DATA_KEY: 'XEbSOHWCu707lJEtWwtWl4FvflLD3dlC'
 
             SERVICE_DEBUG_MODE: 'false'
 

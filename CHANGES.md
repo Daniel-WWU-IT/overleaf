@@ -36,6 +36,21 @@
         cookieSessionLength: false,
         ```
   - Modify the compile timeout `defaultFeatures.compileTimeout` as needed
+    - Redirect requests to the registration service by adding the following location to `server-ce/nginx/sharelatex.conf`:
+        ```
+        location /regsvc {
+            proxy_pass http://localhost:8000/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_hide_header X-Frame-Options;
+            proxy_read_timeout 10m;
+            proxy_send_timeout 10m;
+        }
+        ```
 - Redirect `GET` requests to the reverse proxy service through `server-ce/nginx/sharelatex.conf` by adding the following to the `/` location:
     ```
     if ($request_method = GET) {
