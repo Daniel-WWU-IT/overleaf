@@ -84,7 +84,7 @@ def create_user(client):
 
     try:
         output = str(result.stdout)
-        regex = r".*Successfully created .* as a user.*(^\s*https.*\s*$).*Done"
+        regex = r".*Successfully created .* as a user.*(^\s*http.*\s*$).*Done"
         matches = re.finditer(regex, output, re.MULTILINE|re.DOTALL)
         link = next(matches).group(1).strip()
 
