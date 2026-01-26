@@ -118,15 +118,16 @@ def login(client, data_enc_key):
     _error(client, 'Login: Email or password missing', 400)
 
   try:
-    login = perform_login(client, email, password)
+    resp = perform_login(client, email, password)
 
     # Get all Sharelatex-specific headers and cookies
     data = {'headers': {}, 'cookies': {}}
-    for key in login.headers:
+    for key in resp.headers:
       if 'sharelatex' in key.casefold():
-        data['headers'][key] = login.headers[key]
+        data['headers'][key] = resp.headers[key]
 
-    cookies = login.cookies.get_dict(urlparse(_resolve_url('')).netloc)
+    cookies_loc = os.getenv('COOKIES_LOCATION', urlparse(_resolve_url('')).netloc)
+    cookies = resp.cookies.get_dict(cookies_loc)
     for key in cookies:
       if 'sharelatex' in key.casefold():
         data['cookies'][key] = cookies[key]
@@ -233,6 +234,8 @@ def regsvc():
   elif action.casefold() == 'delete':
     verify_api_key(client)
     result = delete_user(client)
+  elif action.casefold() == 'echo':
+    result = "ECHO"
   else:
     _error(client, 'Unknown action', 404)
 
