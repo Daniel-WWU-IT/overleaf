@@ -65,7 +65,7 @@ def extract_auth_tokens(client, link):
   response = client.get(link)
 
   regex = r"<input\s*name=[\"']_csrf[\"']\s*type=[\"']hidden[\"']\s*value=[\"']([a-zA-z0-9-]*)[\"'].*>"
-  matches = re.finditer(regex, response.text, re.MULTILINE|re.DOTALL)
+  matches = re.finditer(regex, response.text, re.MULTILINE | re.DOTALL)
   return next(matches).group(1).strip(), response.headers, response.cookies
 
 
@@ -75,7 +75,8 @@ def set_password(client, link, password):
 
   # Perform POST request to set the password
   params = parse_qs(urlparse(link).query)
-  return client.post(_resolve_url('/user/password/set'), data={'_csrf': csrf, 'passwordResetToken': params['token'][0], 'password': password})
+  return client.post(_resolve_url('/user/password/set'),
+                     data={'_csrf': csrf, 'passwordResetToken': params['token'][0], 'password': password})
 
 
 def perform_login(client, email, password):
@@ -92,14 +93,15 @@ def create_user(client):
     _error(client, 'Email address missing', 400)
   password = _get_header_password()
 
-  result = subprocess.run(['grunt', 'user:create', '--email=' + email], universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  result = subprocess.run(['grunt', 'user:create', '--email=' + email], universal_newlines=True, stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT)
   if result.returncode != 0:
     _error(client, 'Creating the user account failed (process error)')
 
   try:
     output = str(result.stdout)
     regex = r".*Successfully created .* as a user.*(^\s*http.*\s*$).*Done"
-    matches = re.finditer(regex, output, re.MULTILINE|re.DOTALL)
+    matches = re.finditer(regex, output, re.MULTILINE | re.DOTALL)
     link = next(matches).group(1).strip()
 
     if password != '':
@@ -214,7 +216,7 @@ def regsvc():
   data_enc_key = os.getenv('REMOTE_API_DATA_KEY', '')
   if data_enc_key == '':
     _error(client, 'No data key set', 500)
-  data_enc_key = base64.b64encode(data_enc_key.encode()) # Required by Fernet
+  data_enc_key = base64.b64encode(data_enc_key.encode())  # Required by Fernet
 
   action = flask.request.args.get('action', 'create-and-login')
   result = None
