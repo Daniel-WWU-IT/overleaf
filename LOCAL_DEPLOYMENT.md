@@ -39,6 +39,17 @@ Next, a few setup steps for Nextcloud need to be done:
 
 All these steps only need to be done once. **Note**: The Nextcloud setup needs to be redone if you delete the `nextcloud` Docker volume.
 
+## Configuration
+
+1. After logging in to Nextcloud as `admin`, go to the _Apps_ settings section. Under _Disabled apps_, locate _Overleaf Nextcloud Integration_ and enable it. 
+2. Open the _Administration settings_ and go to the _Overleaf_ section. Enter the following settings:
+   - **Overleaf URL**: `https://overleaf.nextcloud.dev.local/`
+   - **API key**: `F18KiFG6gStOav5UzdH9eIke7taCSqGx`
+   
+It's advisable to make sure that the settings have been saved by reloading the page. You are now ready to use Overleaf in Nextcloud on a local deployment!
+
 ## Running a local deployment
 
 The provided `makefile` in the project root directory can be used to build local container images and boot up a local deployment; simply run `make` without any target. This will also start a Nextcloud instance, which runs on `https://nextcloud.dev.local`. The default administrator login is `admin/admin`.
+
+Overleaf itself is accessible under `https://overleaf.nextcloud.dev.local/`, though you should not open this URL directly.
