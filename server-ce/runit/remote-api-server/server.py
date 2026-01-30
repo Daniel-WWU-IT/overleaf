@@ -12,6 +12,16 @@ from cryptography.fernet import Fernet
 app = flask.Flask(__name__)
 
 
+# Debugging
+def _debug_print(msg, *, top_line = False, bottom_line = False):
+  if os.getenv('DEBUG_INFORMATION').casefold() == 'true':
+    if top_line:
+      print('\033[95m\033[1m----------------------------------------', flush=True)
+    print(f'\033[93m\033[1m{msg}', flush=True)
+    if bottom_line:
+      print('\033[95m\033[1m----------------------------------------', flush=True)
+
+
 # Cryptography functions
 def _encrypt_data(data, key):
   fernet = Fernet(key)
@@ -35,6 +45,8 @@ def _data_response(data=None, data_key=''):
 
 
 def _error(client, msg, code=500):
+  _debug_print(f'Aborting due to error: {msg} (code={code})', bottom_line=True)
+
   app.logger.error(msg)
   if client is not None:
     client.close()
@@ -66,25 +78,41 @@ def extract_auth_tokens(client, link):
 
   regex = r"<input\s*name=[\"']_csrf[\"']\s*type=[\"']hidden[\"']\s*value=[\"']([a-zA-z0-9-]*)[\"'].*>"
   matches = re.finditer(regex, response.text, re.MULTILINE | re.DOTALL)
-  return next(matches).group(1).strip(), response.headers, response.cookies
+  csrf = next(matches).group(1).strip()
+
+  _debug_print(f'\tAuth tokens: {csrf}; cookies={str(response.cookies)}, headers={str(response.headers)}')
+
+  return csrf, response.headers, response.cookies
 
 
-def set_password(client, link, password):
+def set_password(client, link, email, password):
   # Get auth tokens from activation page
   csrf, h, c = extract_auth_tokens(client, link)
 
+  _debug_print(f'Setting password for: {email}, password: {password}')
+
   # Perform POST request to set the password
   params = parse_qs(urlparse(link).query)
-  return client.post(_resolve_url('/user/password/set'),
-                     data={'_csrf': csrf, 'passwordResetToken': params['token'][0], 'password': password})
+  resp = client.post(_resolve_url('/user/password/set'),
+                     data={'_csrf': csrf, 'passwordResetToken': params['token'][0], 'email': email, 'password': password},
+                     cookies=c.get_dict()
+                     )
+  _debug_print(f'\t{str(resp)}')
+
+  return resp
 
 
 def perform_login(client, email, password):
   # Get auth tokens from login page
   csrf, h, c = extract_auth_tokens(client, _resolve_url('/login'))
 
-  # Perform POST request to log the user in
-  return client.post(_resolve_url('/login'), data={'_csrf': csrf, 'email': email, 'password': password})
+  _debug_print(f'Logging in: {email}, password: {password}')
+
+  # Perform POST request to log in
+  resp = client.post(_resolve_url('/login'), data={'_csrf': csrf, 'email': email, 'password': password}, cookies=c.get_dict())
+  _debug_print(f'\t{str(resp)}')
+
+  return resp
 
 
 def create_user(client):
@@ -93,9 +121,13 @@ def create_user(client):
     _error(client, 'Email address missing', 400)
   password = _get_header_password()
 
+  _debug_print(f'Creating user: {email}, password: {password}')
+
   result = subprocess.run(['grunt', 'user:create', '--email=' + email], universal_newlines=True, stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT)
-  if result.returncode != 0:
+  if result.returncode == 0:
+    _debug_print(f'User created')
+  else:
     _error(client, 'Creating the user account failed (process error)')
 
   try:
@@ -105,7 +137,9 @@ def create_user(client):
     link = next(matches).group(1).strip()
 
     if password != '':
-      set_password(client, link, password)
+      resp = set_password(client, link, email, password)
+      if resp.status_code >= 400:
+        _error(client, 'Unable to set password: ' + resp.content, resp.status_code)
       return _data_response()
     else:
       return _data_response({'url': link})
@@ -122,6 +156,10 @@ def login(client, data_enc_key):
   try:
     resp = perform_login(client, email, password)
 
+    if resp.status_code >= 400:
+      _error(client, 'Logging in a user resulted in an error: ' + str(resp.content) + ' [' + str(resp.status_code) + ']')
+      return _data_response({}, data_enc_key)
+
     # Get all Sharelatex-specific headers and cookies
     data = {'headers': {}, 'cookies': {}}
     for key in resp.headers:
@@ -134,6 +172,8 @@ def login(client, data_enc_key):
       if 'sharelatex' in key.casefold():
         data['cookies'][key] = cookies[key]
 
+    _debug_print(f'\tLog in extended data: {str(data)}')
+
     return _data_response(data, data_enc_key)
   except BaseException as e:
     _error(client, 'Logging in a user resulted in an exception: ' + str(e))
@@ -145,18 +185,22 @@ def open_projects(client, data_enc_key):
     _error(client, 'Open: Data missing', 400)
   data = _decrypt_data(data, data_enc_key)
 
+  _debug_print(f'Open projects: {str(data)}')
+
   try:
     req_data = flask.json.loads(data)
-    response = flask.make_response(flask.redirect(_resolve_url('/project', use_origin=True), code=302))
+    resp = flask.make_response(flask.redirect(_resolve_url('/project', use_origin=True), code=302))
 
     # Copy all specified headers and cookies into the request
     for key in req_data['headers']:
-      response.headers[key] = req_data['headers'][key]
+      resp.headers[key] = req_data['headers'][key]
 
     for key in req_data['cookies']:
-      response.set_cookie(key, req_data['cookies'][key], samesite='None', secure=True)
+      resp.set_cookie(key, req_data['cookies'][key], samesite='None', secure=True)
 
-    return response
+    _debug_print(f'\t{str(resp)}')
+
+    return resp
   except BaseException as e:
     _error(client, 'Opening the projects resulted in an exception: ' + str(e))
 
@@ -166,8 +210,12 @@ def delete_user(client):
   if email == '':
     _error(client, 'Email address missing', 400)
 
+  _debug_print(f'Deleting user: {email}')
+
   result = subprocess.run(['grunt', 'user:delete', '--email=' + email])
-  if result.returncode != 0:
+  if result.returncode == 0:
+    _debug_print('User deleted')
+  else:
     _error(client, 'Deleting the user account failed (process error)')
 
   # We just assume that deleting the user worked
@@ -219,6 +267,9 @@ def regsvc():
   data_enc_key = base64.b64encode(data_enc_key.encode())  # Required by Fernet
 
   action = flask.request.args.get('action', 'create-and-login')
+
+  _debug_print(f'Executing action: {action}', top_line=True)
+
   result = None
   if action.casefold() == 'create':
     verify_api_key(client)
@@ -240,6 +291,8 @@ def regsvc():
     result = "ECHO"
   else:
     _error(client, 'Unknown action', 404)
+
+  _debug_print(f'Execution ({action}) finished: {str(result)}', bottom_line=True)
 
   client.close()
   return result
