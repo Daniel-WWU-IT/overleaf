@@ -34,11 +34,8 @@ services:
             SHARELATEX_SESSION_SECRET: 'iYmZUouDPl3zEahNVM0m5N2kavSsfQIT'
             REMOTE_API_KEY: 'F18KiFG6gStOav5UzdH9eIke7taCSqGx'
             REMOTE_API_ALLOWED_CLIENTS: '*'
-            REMOTE_API_DATA_KEY: 'XEbSOHWCu707lJEtWwtWl4FvflLD3dlC'
 
             SERVICE_DEBUG_MODE: 'false'
-
-            COOKIES_LOCATION: 'sharelatex.local'
 
             DEBUG_INFORMATION: 'true'
 
