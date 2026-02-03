@@ -24,7 +24,7 @@ function _showInfoDialog() {
     ';
 
     htmlCode = htmlCode.replace("${OVERLEAF_VERSION}", OVERLEAF_VERSION);
-    htmlCode = htmlCode.replace("${INTEGRATION_VERSION}", INTEGRATIwON_VERSION);
+    htmlCode = htmlCode.replace("${INTEGRATION_VERSION}", INTEGRATION_VERSION);
 
     $().msgpopup({
 		text: htmlCode,
