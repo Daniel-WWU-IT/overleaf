@@ -27,7 +27,7 @@ These steps will allow you to use the two local domains to work over *https*, wh
 
 Next, a few setup steps for Nextcloud need to be done:
 
-1. Start the local deployment by simply running `make` in the main project directory. Ignore any errors.
+1. Start the local deployment by simply running `make` in the main project directory; ignore any warnings or errors.
 2. Once the Nextcloud container has started, go to `https://nextcloud.dev.local` and follow the on-screen instructions (use `admin/admin` to log in).
 3. Enter the running Nextcloud container:
     ```
@@ -53,3 +53,5 @@ It's advisable to make sure that the settings have been saved by reloading the p
 ## Running a local deployment
 
 The provided `makefile` in the project root directory can be used to build local container images and boot up a local deployment; simply run `make` without any target. This will also start a Nextcloud instance, which runs on `https://nextcloud.dev.local`. The default administrator login is `admin/admin`.
+
+To stop the entire deployment, simply press `d` to detach in the console; this will automatically stop all containers.
