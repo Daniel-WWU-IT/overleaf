@@ -17,19 +17,19 @@ services:
         volumes:
             - ./.data/sharelatex:/var/lib/sharelatex
         environment:
-            SHARELATEX_SITE_URL: http://sharelatex
+            SHARELATEX_SITE_URL: 'http://sharelatex'
 
-            SHARELATEX_APP_NAME: Overleaf Local
+            SHARELATEX_APP_NAME: 'Overleaf Local'
 
-            SHARELATEX_MONGO_URL: mongodb://mongo/sharelatex
+            SHARELATEX_MONGO_URL: 'mongodb://mongo/sharelatex'
 
-            SHARELATEX_REDIS_HOST: redis
-            REDIS_HOST: redis
+            SHARELATEX_REDIS_HOST: 'redis'
+            REDIS_HOST: 'redis'
 
             ENABLED_LINKED_FILE_TYPES: 'project_file,project_output_file'
             ENABLE_CONVERSIONS: 'true'
             EMAIL_CONFIRMATION_DISABLED: 'true'
-            TEXMFVAR: /var/lib/sharelatex/tmp/texmf-var
+            TEXMFVAR: '/var/lib/sharelatex/tmp/texmf-var'
 
             SHARELATEX_SESSION_SECRET: 'iYmZUouDPl3zEahNVM0m5N2kavSsfQIT'
             REMOTE_API_KEY: 'F18KiFG6gStOav5UzdH9eIke7taCSqGx'
@@ -69,11 +69,13 @@ services:
         expose:
             - "80"
         environment:
-            - OVERWRITEPROTOCOL=https
-            - OVERWRITEHOST=nextcloud.dev.local
-            - NEXTCLOUD_ADMIN_USER=admin
-            - NEXTCLOUD_ADMIN_PASSWORD=admin
-            - OVERLEAF_INTERNAL_URL=http://sharelatex
+            OVERWRITEPROTOCOL: 'https'
+            OVERWRITEHOST: 'nextcloud.dev.local'
+
+            NEXTCLOUD_ADMIN_USER: 'admin'
+            NEXTCLOUD_ADMIN_PASSWORD: 'admin'
+
+            OVERLEAF_INTERNAL_URL: 'http://sharelatex'
         volumes:
             - nextcloud:/var/www/html
             - ./.data/custom_apps:/var/www/html/custom_apps
