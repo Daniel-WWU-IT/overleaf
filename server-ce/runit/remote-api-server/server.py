@@ -45,7 +45,7 @@ def _error(client, msg, code=500):
 
 
 def _resolve_url(path):
-  host_url = os.getenv('SHARELATEX_SITE_URL', '')
+  host_url = os.getenv('OVERLEAF_SITE_URL', '')
   return host_url.rstrip('/') + '/' + path.lstrip('/')
 
 
