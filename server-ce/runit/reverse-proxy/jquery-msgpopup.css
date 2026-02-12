@@ -1,0 +1,138 @@
+/**
+ * Item
+ * ----------------------------------------------------------------------------------
+ */
+.msgpopup-box {
+	overflow: hidden;
+	display: none;
+}
+.msgpopup-wrap {
+	position: relative;
+}
+.msgpopup-item {
+	position: relative;
+	font-size: 14px;
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+	text-align: center;
+}
+
+/**
+ * Default position
+ * ----------------------------------------------------------------------------------
+ */
+.msgpopup-container {
+	position: fixed;
+	left: 50%;
+	top: 50%;
+	width: 600px;
+	transform: translate(-50%, -50%);
+	bottom: 5px;
+	z-index: 999;
+}
+.msgpopup-container .msgpopup-box-clone-output {
+	width: 100%;
+	overflow: auto;
+	max-height: 100vh;
+}
+.msgpopup-container .msgpopup-wrap {
+/*  right: -360px;
+	transition: right 0.5s ease 0s; */
+}
+.msgpopup-container .msgpopup-wrap.msgpopup-wrap-visible {
+/*	right: 0; */
+}
+
+/**
+ * Theme
+ * ----------------------------------------------------------------------------------
+ */
+.msgpopup-theme-default .msgpopup-close-x {
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	line-height: inherit;
+	font-size: inherit;
+	cursor: pointer;
+	border-radius: 50%;
+	text-align: center;
+	position: absolute;
+	right: 3px;
+	top: 0;
+	padding: 4px;
+	width: 16px;
+	height: 16px;
+	background-color: #CA1C3B;
+}
+.msgpopup-theme-default .msgpopup-close-x:before {
+	content: '';
+	position: absolute;
+	left: 6px;
+	top: 6px;
+	right: 6px;
+	bottom: 6px;
+	background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAABsUlEQVRogc3aMU/DMBCG4fxRNtgjhk6oSGROu5WFInVBjGz8vJehsnCtOD3H9t19Y3RJ/TS2m5w6DEmAPXBJj3sJcALme0UP/OeoNDZxgJdofGOuKEa4wySIZUwG4QaTQdxigNeVopCDIWIvGN88AF+CQhOM8EsG+A0nHIUnqE0z1qdTnEt6ohvMZoQnTDUiutBBeKHmawbZwgY4Sy8ovTPNMMgX9mfphdWmGa2mkyWmO0IDo4aIPrD5BkDrhV3wwc02AHot7A6Y7DRDezr1wLhB1GDcIaKBSTeAZ+BJWNt2YRdgpHdGkj4LWxnjo9lRifGBCNmI8YUI4bqwpXmzHm82wGMBZGc93sUg/52IY95quslGhC9MJcIHBvmjuCQ2TUDkj+ITsHOJYcMDIA5aTdUId5gahBsMDd+xsWoC0uEdG+0mIB3f7AowddOsJ0INo4HojsGgeUbrDQDD5hmtNgActGwKMMvTzAOiGuMJsRkDvAtPUG+eId8AvgdgFhSaNc+Q3ZlzKB5XisxbNncwU1q8hDFHhGQwU6549IgISTDLiKh4Bn6UxlYcrv+d+UiP/wGfJ1F2pYUZrQAAAABJRU5ErkJggg==');
+	background-size: cover;
+	background-position: center center;
+}
+
+.msgpopup-theme-default .msgpopup-wrap {
+	padding: 5px 10px 0 10px;
+	margin-bottom: 7px;
+}
+.msgpopup-theme-default .msgpopup-content {
+	padding: 15px;
+}
+.msgpopup-theme-default .msgpopup-type {
+	border: 1px solid darkgray;
+	border-radius: 3px;
+	font-weight: bold;
+	box-shadow: 0 5px 5px rgba(0,0,0,0.1);
+}
+.msgpopup-theme-default .msgpopup-normal {
+	color: #5B6D72;
+	background: #FCFCFD;
+}
+.msgpopup-theme-default .msgpopup-success {
+	color: #13A20A;
+	background: #F9FFFA;
+}
+.msgpopup-theme-default .msgpopup-error {
+	color: #E11919;
+	background: #FFF7F7;
+}
+.msgpopup-theme-default .msgpopup-info {
+	color: #31BFDB;
+	background: #EDFCFF;
+}
+.msgpopup-theme-default .msgpopup-alert {
+	color: #F2BC00;
+	background: #FFFFED;
+}
+
+/**
+ * Buttons
+ * ----------------------------------------------------------------------------------
+ */
+.dlg-btn {
+    display: inline-block;
+    margin-bottom: 0;
+    font-weight: 700;
+    text-align: center;
+    vertical-align: middle;
+    cursor: pointer;
+    background-image: none;
+    border: 2px solid transparent;
+    white-space: nowrap;
+    padding: 4px 16px 5px;
+    font-size: 16px;
+    line-height: 1.5625;
+    border-radius: 9999px;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.dlg-btn:hover {
+    border: 2px solid darkgray;
+}

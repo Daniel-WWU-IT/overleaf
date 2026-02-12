@@ -1,0 +1,16 @@
+/* Navigation bar */
+.navbar-default .navbar-nav>li.subdued>a {
+    background-color: transparent;
+    border: 0;
+    color: #fff;
+    margin-left: 0;
+}
+.navbar-default .navbar-nav>li.subdued>a:focus,. navbar-default .navbar-nav>li.subdued>a:hover {
+    background-color: #fff;
+    color: #138a07;
+}
+.navbar-default .navbar-nav>li.subdued>a:focus {
+    outline: thin dotted;
+    outline: 5px auto -webkit-focus-ring-color;
+    outline-offset: -2px;
+}
