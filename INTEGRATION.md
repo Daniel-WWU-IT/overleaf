@@ -10,11 +10,10 @@
       ```
 - Modifications to the main Docker file `server-ce/Dockerfile`:
     - Use the custom base image by modifying ARG `OVERLEAF_BASE_TAG` accordingly
-    - Install pip and some Python modules by adding this directly above the `WORKDIR` directive:
+    - Install additional Python modules by adding this directly above the `WORKDIR` directive:
         ```
         RUN apt-get update \
-        &&  apt-get install -y python3-pip \
-        &&  python3 -m pip install Flask requests cryptography beautifulsoup4 gunicorn
+        &&  apt-get install -y python3-flask python3-requests python3-cryptography python3-bs4 python3-lxml python3-gunicorn
         ```
     - **MIGHT REMOVE/CHANGE** Add some web files by adding the following below the `Copy grunt thin wrapper` block:
         ```

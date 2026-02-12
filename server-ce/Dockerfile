@@ -7,11 +7,10 @@
 ARG OVERLEAF_BASE_TAG=omnivox/overleaf-base:latest
 FROM $OVERLEAF_BASE_TAG
 
-# Install pip and some Python modules
+# Install additional Python modules
 # -----------------------------------
 RUN apt-get update \
-&&  apt-get install -y python3-pip \
-&&  python3 -m pip install Flask requests cryptography beautifulsoup4 lxml gunicorn
+&&  apt-get install -y python3-flask python3-requests python3-cryptography python3-bs4 python3-lxml python3-gunicorn
 
 WORKDIR /overleaf
 
