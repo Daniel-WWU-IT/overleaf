@@ -35,7 +35,25 @@
           ;;
         ```
       to create regular users via command-line
-    -
+- Update `server-ce/nginx/overleaf.conf` as follows:
+  - Add `proxy_hide_header X-Frame-Options;` for locations `/` and `/socket.io` to allow iframe embedding
+  - Redirect requests to the registration service by adding the following location to `server-ce/nginx/sharelatex.conf`:
+    ```
+    location /regsvc {
+        proxy_pass http://localhost:8000/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_hide_header X-Frame-Options;
+        proxy_read_timeout 10m;
+        proxy_send_timeout 10m;
+    }
+    ```
+  - Replace all instances of `127.0.0.1` by `localhost`
+
 ## How to use
 ### Registration/User management service
 A new service called `regsvc` will be launched within the container; it can be reached at the `/regsvc` endpoint.
