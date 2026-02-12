@@ -1,3 +1,4 @@
+# Local Overleaf+Nextcloud deployment
 services:
     sharelatex:
         restart: always
@@ -10,28 +11,26 @@ services:
                 condition: service_started
         ports:
             - "8099:80"
-        links:
-            - mongo
-            - redis
         stop_grace_period: 60s
         volumes:
-            - ./.data/sharelatex:/var/lib/sharelatex
+            - ./.data/overleaf:/var/lib/overleaf
         environment:
-            SHARELATEX_SITE_URL: 'http://sharelatex'
+            OVERLEAF_SITE_URL: 'http://sharelatex'
 
-            SHARELATEX_APP_NAME: 'Overleaf Local'
+            OVERLEAF_APP_NAME: 'Overleaf Local'
 
-            SHARELATEX_MONGO_URL: 'mongodb://mongo/sharelatex'
+            OVERLEAF_MONGO_URL: 'mongodb://mongo/sharelatex'
 
-            SHARELATEX_REDIS_HOST: 'redis'
+            OVERLEAF_REDIS_HOST: 'redis'
             REDIS_HOST: 'redis'
 
             ENABLED_LINKED_FILE_TYPES: 'project_file,project_output_file'
             ENABLE_CONVERSIONS: 'true'
             EMAIL_CONFIRMATION_DISABLED: 'true'
-            TEXMFVAR: '/var/lib/sharelatex/tmp/texmf-var'
 
-            SHARELATEX_SESSION_SECRET: 'iYmZUouDPl3zEahNVM0m5N2kavSsfQIT'
+            OVERLEAF_SESSION_SECRET: 'iYmZUouDPl3zEahNVM0m5N2kavSsfQIT'
+
+            # Integration-specific settings
             REMOTE_API_KEY: 'F18KiFG6gStOav5UzdH9eIke7taCSqGx'
             REMOTE_API_ALLOWED_CLIENTS: '*'
 
@@ -41,25 +40,26 @@ services:
 
     mongo:
         restart: always
-        image: mongo:4.4
+        image: mongo:6.0
         container_name: mongo
-        command: mongod --quiet --logpath /dev/null
-        expose:
-            - 27017
+        command: "--replSet overleaf"
         volumes:
             - ./.data/mongo:/data/db
+            - ./bin/shared/mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
+        environment:
+            MONGO_INITDB_DATABASE: sharelatex
+        extra_hosts:
+            - mongo:127.0.0.1
         healthcheck:
-            test: echo 'db.stats().ok' | mongo localhost:27017/test --quiet
+            test: echo 'db.stats().ok' | mongosh localhost:27017/test --quiet
             interval: 10s
             timeout: 10s
             retries: 5
 
     redis:
         restart: always
-        image: redis:5
+        image: redis:6.2
         container_name: redis
-        expose:
-            - 6379
         volumes:
             - ./.data/redis:/data
 
