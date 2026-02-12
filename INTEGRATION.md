@@ -1,8 +1,41 @@
 # Overleaf Nextcloud Integration - v2.0.0
 
 ## Changes applied to Overleaf
-_Coming soon!_
-
+- Build custom base image to use the full Texlive distribution by applying the following changes to `server-ce/Dockerfile-base`:
+    - Set `selected_scheme` to `scheme-full` (located within the TexLive installation block)
+    - Update TexLive by adding this directly after the TexLive installation block:
+      ```
+      RUN tlmgr update --self \
+      &&  tlmgr update --all
+      ```
+- Modifications to the main Docker file `server-ce/Dockerfile`:
+    - Use the custom base image by modifying ARG `OVERLEAF_BASE_TAG` accordingly
+    - Install pip and some Python modules by adding this directly above the `WORKDIR` directive:
+        ```
+        RUN apt-get update \
+        &&  apt-get install -y python3-pip \
+        &&  python3 -m pip install Flask requests cryptography beautifulsoup4 gunicorn
+        ```
+    - **MIGHT REMOVE/CHANGE** Add some web files by adding the following below the `Copy grunt thin wrapper` block:
+        ```
+        COPY server-ce/runit/reverse-proxy/*.js /overleaf/services/web/public/js/
+        COPY server-ce/runit/reverse-proxy/*.css /overleaf/services/web/public/stylesheets/
+        ```
+    - To add additional Tex packages, you can use the following command:
+        ```
+        RUN tlmgr install <package>
+        ```
+- Add `server-ce/runit/remote-api-server` and `server-ce/runit/reverse-proxy`
+    - Make sure that the `run` files have the executable flag set
+- Modify `server-ce/bin/grunt` as follows:
+    - Add new case entry
+        ```
+        user:create)
+          exec /sbin/setuser www-data node modules/server-ce-scripts/scripts/create-user.mjs "$@"
+          ;;
+        ```
+      to create regular users via command-line
+    -
 ## How to use
 ### Registration/User management service
 A new service called `regsvc` will be launched within the container; it can be reached at the `/regsvc` endpoint.
