@@ -2,7 +2,7 @@
 services:
     sharelatex:
         restart: always
-        image: sharelatex/sharelatex
+        image: sharelatex/sharelatex:v6-beta
         container_name: sharelatex
         depends_on:
             mongo:
@@ -11,6 +11,9 @@ services:
                 condition: service_started
         ports:
             - "8099:80"
+        #links:
+            #- mongo
+            #- redis
         stop_grace_period: 60s
         volumes:
             - ./.data/overleaf:/var/lib/overleaf
@@ -40,12 +43,12 @@ services:
 
     mongo:
         restart: always
-        image: mongo:6.0
+        image: mongo:8.2
         container_name: mongo
         command: "--replSet overleaf"
         volumes:
             - mongo:/data/db
-            - ./bin/shared/mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
+            - ${PWD}/bin/shared/mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
         environment:
             MONGO_INITDB_DATABASE: sharelatex
         extra_hosts:
@@ -58,7 +61,7 @@ services:
 
     redis:
         restart: always
-        image: redis:6.2
+        image: redis:7.4
         container_name: redis
         volumes:
             - redis:/data
@@ -66,8 +69,6 @@ services:
     nextcloud:
         image: nextcloud:31
         container_name: nextcloud
-        expose:
-            - "80"
         environment:
             OVERWRITEPROTOCOL: 'https'
             OVERWRITEHOST: 'nextcloud.dev.local'
@@ -96,7 +97,7 @@ services:
 volumes:
     nextcloud:
         name: nextcloud
-    redis:
-        name: redis
     mongo:
         name: mongo
+    redis:
+        name: redis
