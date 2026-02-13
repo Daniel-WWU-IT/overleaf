@@ -11,9 +11,6 @@ services:
                 condition: service_started
         ports:
             - "8099:80"
-        #links:
-            #- mongo
-            #- redis
         stop_grace_period: 60s
         volumes:
             - ./.data/overleaf:/var/lib/overleaf
