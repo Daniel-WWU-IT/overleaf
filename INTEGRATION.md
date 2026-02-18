@@ -75,10 +75,10 @@ https://mydomain.com/regsvc?action=create&email=my@mail.com
 #### Configuration
 The `regsvc` service can be configured by setting various environment variables:
 
-| Variable | Description                                                                                                 | Default |
-| --- |-------------------------------------------------------------------------------------------------------------| --- |
-| `REMOTE_API_KEY` | This key is used to protect the various endpoints (except for `open-projects`); it is mandatory to specify. | `""` |
-| `REMOTE_API_ALLOWED_CLIENTS` | If set, only the specified clients are allowed to issue requests; wildcards are supported.                  | `""` |
+| Variable                     | Description                                                                                                 | Default |
+|------------------------------|-------------------------------------------------------------------------------------------------------------|---------|
+| `REMOTE_API_KEY`             | This key is used to protect the various endpoints (except for `open-projects`); it is mandatory to specify. | `""`    |
+| `REMOTE_API_ALLOWED_CLIENTS` | If set, only the specified clients are allowed to issue requests; wildcards are supported.                  | `""`    |
 
 ### Local deployment
 The directory `local` contains files to run a local deployment alongside a Nextcloud. The `makefile` located in the project root directory can be used to build and run this deployment. Before using this, though, read the instructions in[`LOCAL_DEPLOYMENT.md`](local/LOCAL_DEPLOYMENT.md) carefully, as it will _not_ work out-of-the-box!
