@@ -15,7 +15,7 @@ Unfortunately, running a local instance of Overleaf+Nextcloud Integration is no 
 2. Install **mkcert** and execute the following:
     ```
     mkcert -install
-   
+
    mkcert \
     -cert-file local.crt \
     -key-file local.key \
@@ -43,11 +43,11 @@ All these steps only need to be done once. **Note**: The Nextcloud setup needs t
 
 ## Configuration
 
-1. After logging in to Nextcloud as `admin`, go to the _Apps_ settings section. Under _Disabled apps_, locate _Overleaf Nextcloud Integration_ and enable it. 
+1. After logging in to Nextcloud as `admin`, go to the _Apps_ settings section. Under _Disabled apps_, locate _Overleaf Nextcloud Integration_ and enable it.
 2. Open the _Administration settings_ and go to the _Overleaf_ section. Enter the following settings:
    - **Overleaf URL**: `https://overleaf.nextcloud.dev.local/`
    - **API key**: `F18KiFG6gStOav5UzdH9eIke7taCSqGx`
-   
+
 It's advisable to make sure that the settings have been saved by reloading the page. You are now ready to use Overleaf in Nextcloud on a local deployment!
 
 ## Running a local deployment
@@ -55,3 +55,6 @@ It's advisable to make sure that the settings have been saved by reloading the p
 The provided `makefile` in the project root directory can be used to build local container images and boot up a local deployment; simply run `make` without any target. This will also start a Nextcloud instance, which runs on `https://nextcloud.dev.local`. The default administrator login is `admin/admin`.
 
 To stop the entire deployment, simply press `d` to detach in the console; this will automatically stop all containers.
+
+### Overleaf settings
+While this deployment of Overleaf is completely configured, a few settings can be changed within the `local.env` file.
