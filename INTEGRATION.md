@@ -15,16 +15,16 @@
         RUN apt-get update \
         &&  apt-get install -y python3-flask python3-requests python3-cryptography python3-bs4 python3-lxml python3-gunicorn
         ```
-    - **MIGHT REMOVE/CHANGE** Add some web files by adding the following below the `Copy grunt thin wrapper` block:
+    - Add some web files by adding the following below the `Copy grunt thin wrapper` block:
         ```
-        COPY server-ce/runit/reverse-proxy/*.js /overleaf/services/web/public/js/
-        COPY server-ce/runit/reverse-proxy/*.css /overleaf/services/web/public/stylesheets/
+        COPY server-ce/runit/ui-proxy/js/*.js /overleaf/services/web/public/js/ui-proxy/
+        COPY server-ce/runit/ui-proxy/css/*.css /overleaf/services/web/public/stylesheets/ui-proxy/
         ```
     - To add additional Tex packages, you can use the following command:
         ```
         RUN tlmgr install <package>
         ```
-- Add `server-ce/runit/remote-api-server` and `server-ce/runit/reverse-proxy`
+- Add `server-ce/runit/remote-api-server` and `server-ce/runit/ui-proxy`
     - Make sure that the `run` files have the executable flag set
 - Modify `server-ce/bin/grunt` as follows:
     - Add new case entry
@@ -34,6 +34,13 @@
           ;;
         ```
       to create regular users via command-line
+- Change the following settings in `server-ce/config/settings.js`:
+  - Disable CSP by replacing the `csp` block as follows:
+    ```
+    csp: {
+        enabled: false,
+    },
+    ```
 - Update `server-ce/nginx/overleaf.conf` as follows:
   - Add `proxy_hide_header X-Frame-Options;` for locations `/` and `/socket.io` to allow iframe embedding
   - Route `GET` requests through the UI proxy by changing the `proxy_pass` option of location `/` to:

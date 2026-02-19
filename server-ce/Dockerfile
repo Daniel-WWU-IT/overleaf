@@ -81,10 +81,9 @@ COPY server-ce/config/custom-environment-variables.json /overleaf/services/histo
 ADD server-ce/bin/grunt /usr/local/bin/grunt
 RUN chmod +x /usr/local/bin/grunt
 
-# TODO: UI proxy
-# Copy reverse proxy scripts and stylesheets
-# COPY server-ce/runit/reverse-proxy/*.js /overleaf/services/web/public/js/
-# COPY server-ce/runit/reverse-proxy/*.css /overleaf/services/web/public/stylesheets/
+# Copy UI proxy scripts and stylesheets
+COPY server-ce/runit/ui-proxy/js/*.js /overleaf/services/web/public/js/ui-proxy/
+COPY server-ce/runit/ui-proxy/css/*.css /overleaf/services/web/public/stylesheets/ui-proxy/
 
 # Add missing TeX packages
 # ------------------------

@@ -8,7 +8,7 @@ build:
 	cd ./server-ce && make build-base build-community
 
 start:
-	docker compose -f ./local/docker-compose.yml up --no-attach mongo --no-attach redis
+	docker compose -f ./local/docker-compose.yml up --no-attach mongo --no-attach redis --no-attach nextcloud --no-attach proxy
 	docker compose -f ./local/docker-compose.yml down
 
 .PHONY: build start run

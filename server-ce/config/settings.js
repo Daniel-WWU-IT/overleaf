@@ -218,7 +218,7 @@ const settings = {
   },
 
   csp: {
-    enabled: process.env.OVERLEAF_CSP_ENABLED !== 'false',
+    enabled: false,
   },
 
   rateLimit: {
