@@ -50,7 +50,7 @@ def proxy(path: str) -> Response:
                               cookies=request.cookies)
 
   resp = Response(
-    _process_content(req_resp, request.path) if os.getenv("DISABLE_UI_PROXY", "") != "true" else req_resp.content,
+    _process_content(req_resp, request.path) if os.getenv("DISABLE_UI_PROXY", "").lower() != "true" else req_resp.content,
     status=req_resp.status_code,
     headers={name: value for (name, value) in req_resp.raw.headers.items() if name.lower() not in excluded_headers}
   )
