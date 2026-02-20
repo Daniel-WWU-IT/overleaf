@@ -5,7 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 from flask import Flask, request, Response
 
-from modifiers import modify_general, modify_project
+from modifiers import modify_general, modify_project, modify_editor
 
 app = Flask(__name__)
 
@@ -16,7 +16,7 @@ excluded_headers = ["content-encoding", "content-length", "transfer-encoding", "
 modifiers = {
   "/": modify_project,
   "/project": modify_project,
-  "/project/[0-9A-Fa-f]{24}": None,
+  "/project/[0-9A-Fa-f]{24}": modify_editor,
   "/login": None,
 }
 
