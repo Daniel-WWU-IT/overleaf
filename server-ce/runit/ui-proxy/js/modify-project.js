@@ -1,42 +1,74 @@
+// Info dialog
+function _showInfoDialog() {
+  _unbindShowInfoDialog();
+
+  let htmlCode = '\
+        <div style="font-weight: bold; font-size: 120%; padding-bottom: 10px;">General information about the Overleaf integration</div>\
+        <div style="font-weight: normal; padding-bottom: 5px;">\
+            <p>This version of <em>Overleaf</em> is currently in a <strong>testing phase</strong>.\
+            This means that not all features might work as expected. If you run into any problems, feel free to contact us!</p>\
+            <p><strong>Please note the following limitations when sharing projects:</strong>\
+                <ul>\
+                    <li>Sharing only works amongst <em>sciebo</em> users</li>\
+                    <li>Target users of sharing must have used Overleaf <strong>at least once</strong></li>\
+                </ul>\
+            </p>\
+            <p>Also note that your project files will <strong>not</strong> appear in your <em>sciebo</em> files.\
+            If you want to save your project files to <em>sciebo</em>, export the project as a <strong>.zip</strong> file and upload it to manually.\
+        </div>\
+        <div style="display: grid; grid-template-columns: max-content auto min-content; align-items: center;">\
+            <span style="font-size: 85%; font-weight: normal;"><strong>Overleaf version:</strong> ${OVERLEAF_VERSION} | <strong>Integration version:</strong> ${INTEGRATION_VERSION}</span>\
+            <span>&nbsp;</span>\
+            <button type="button" class="dlg-btn" data-msgpopup-close>Close</button>\
+        </div>\
+    ';
+
+  htmlCode = htmlCode.replace("${OVERLEAF_VERSION}", OVERLEAF_VERSION);
+  htmlCode = htmlCode.replace("${INTEGRATION_VERSION}", INTEGRATION_VERSION);
+
+  $().msgpopup({
+    text: htmlCode,
+    time: false,
+    x: false,
+    closeFunc: () => { _bindShowInfoDialog(); },
+  });
+}
+
+function _bindShowInfoDialog() {
+  $("#nav-item-support-lnk").unbind("click");
+  $("#nav-item-support-lnk").click((event) => {
+    event.preventDefault();
+    _showInfoDialog();
+  });
+}
+
+function _unbindShowInfoDialog() {
+  $("#nav-item-support-lnk").unbind('click');
+  $("#nav-item-support-lnk").click((event) => {
+    event.preventDefault();
+  });
+}
+
+
 // Main modifiers
-function addSupportDropdown() {
+function addHeaderItems() {
   const navBar = $("ul[role='menubar']");
-  if (navBar.length > 0 && navBar.find("#nav-item-support").length === 0) {
-    /*
-    <li role="none" class="nav-item-account dropdown" style="">
-   <button type="button" id="react-aria2017518729-:r0:" aria-expanded="false" role="menuitem" class="dropdown-toggle btn btn-primary" aria-haspopup="true">
-      Account
-      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 256 256" class="ms-2">
-         <path d="M216.49,104.49l-80,80a12,12,0,0,1-17,0l-80-80a12,12,0,0,1,17-17L128,159l71.51-71.52a12,12,0,0,1,17,17Z"></path>
-      </svg>
-   </button>
-   <ul role="menu" aria-labelledby="react-aria2017518729-:r0:" data-bs-popper="static" class="dropdown-menu dropdown-menu-end">
-      <li role="menuitem" aria-disabled="true" data-rr-ui-dropdown-item="" class="dropdown-item disabled">admin@overleaf.nextcloud.dev.local</li>
-      <li class="d-none d-lg-block dropdown-divider" role="separator"></li>
-      <li role="none"><a href="/user/settings" role="menuitem" data-rr-ui-dropdown-item="" class="dropdown-item">Account settings</a></li>
-      <li class="d-none d-lg-block dropdown-divider" role="separator"></li>
-      <li role="none">
-         <button type="submit" form="logOutForm" role="menuitem" data-rr-ui-dropdown-item="" class="d-flex align-items-center justify-content-between dropdown-item">
-            <span>Log Out</span>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
-               <path d="M120,216a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V40a8,8,0,0,1,8-8h64a8,8,0,0,1,0,16H56V208h56A8,8,0,0,1,120,216Zm109.66-93.66-40-40a8,8,0,0,0-11.32,11.32L204.69,120H112a8,8,0,0,0,0,16h92.69l-26.35,26.34a8,8,0,0,0,11.32,11.32l40-40A8,8,0,0,0,229.66,122.34Z"></path>
-            </svg>
-         </button>
-         <form id="logOutForm" method="POST" action="/logout"><input type="hidden" name="_csrf" value="BvMRhwNn-ODQI-VYE-M8nFCpUY3sZ_6mDReE"></form>
-      </li>
-   </ul>
-</li>
-     */
-    navBar.append(`
-        <li role="none" class="nav-item dropdown" id="nav-item-support">
-            <button type="button" id="nav-item-btn-support" role="menuitem" aria-expanded="false" aria-haspopup="true" class="dropdown-toggle btn btn-primary">
-                Support<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 256 256" class="ms-2"><path d="M216.49,104.49l-80,80a12,12,0,0,1-17,0l-80-80a12,12,0,0,1,17-17L128,159l71.51-71.52a12,12,0,0,1,17,17Z"></path></svg>
-            </button>
-            <ul role="menu" data-bs-popper="static" aria-labelledby="nav-item-btn-support" class="dropdown-menu dropdown-menu-end">
-                <li role="menuitem" aria-disabled="true" data-rr-ui-dropdown-item="" class="dropdown-item disabled">admin@overleaf.nextcloud.dev.local</li>
-            </ul>
+  if (navBar.length > 0) {
+    if (navBar.find("#nav-item-support").length === 0) {
+      navBar.append(`
+        <li role="none" class="nav-item subdued" id="nav-item-support">
+            <a id="nav-item-support-lnk" role="menuitem" href="#" class="nav-link" rel="noopener noreferrer">Help</a>
         </li>
     `);
+    }
+
+    if (navBar.find("#nav-item-contact").length === 0) {
+      navBar.append(`
+        <li role="none" class="nav-item" id="nav-item-contact">
+            <a role="menuitem" href="https://hochschulcloud.nrw/de/kontakt" class="nav-link" target="_blank" rel="noopener noreferrer">Contact us</a>
+        </li>
+    `);
+    }
   }
 }
 
@@ -81,8 +113,10 @@ function addVersionToFooter() {
 // Entry hook
 $(window).on("load", function() {
   addMutationsObserver(document.body, () => {
-    addSupportDropdown();
+    addHeaderItems();
     adjustNavigationItems();
     addVersionToFooter();
+
+    _bindShowInfoDialog();
   });
 });

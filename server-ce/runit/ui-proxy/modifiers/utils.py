@@ -5,3 +5,9 @@ def inject_script(soup: BeautifulSoup, file: str) -> None:
   if (body_elem := soup.find("body")) is not None:
     script_tag = soup.new_tag("script", src=file, type="text/javascript")
     body_elem.append(script_tag)
+
+
+def inject_stylesheet(soup, file):
+  if (body_elem := soup.find("body")) is not None:
+    style_tag = soup.new_tag("link", href=file, rel="stylesheet")
+    body_elem.append(style_tag)
