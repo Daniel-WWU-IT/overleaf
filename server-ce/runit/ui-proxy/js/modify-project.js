@@ -1,54 +1,36 @@
 // Info dialog
-function _showInfoDialog() {
-  _unbindShowInfoDialog();
+function showInfoDialog() {
+  const htmlCode = `
+    <div id="info-dialog">
+      <div style="font-weight: bold; font-size: 120%; padding-top: 5px; padding-bottom: 5px; margin-bottom: 10px; border-radius: 2px; text-align: center; background-color: rgb(9, 136, 66); color: white;">General Information and Help</div>
+      <div style="font-weight: normal; padding-bottom: 5px; text-align: left;">
+          <p style="font-size: 110%;">Welcome to <em>Overleaf</em> in <a href="https://www.sciebo.de" target="_blank">sciebo</a>!</p>
+          <p>If you run into any problems, feel free to contact us! Simply use the button on the main page to open our contact form.</p>
+          <p><strong>Please note the following limitations when sharing projects:</strong>
+              <ul>
+                  <li>Sharing only works amongst <em>sciebo</em> users</li>
+                  <li>Target users of sharing must have used Overleaf <strong>at least once</strong></li>
+              </ul>
+          </p>
+          <p>Also note that your project files will <strong>not</strong> appear in your <em>sciebo</em> files.
+          If you want to save your project files to <em>sciebo</em>, export the project as a <strong>.zip</strong> file and upload it manually.
+      </div>
+      <div style="display: grid; grid-template-columns: max-content auto min-content; align-items: center;">
+          <span style="font-size: 85%; font-weight: normal;"><strong>Overleaf version:</strong> ${OVERLEAF_VERSION} | <strong>Integration version:</strong> ${INTEGRATION_VERSION}</span>
+          <span>&nbsp;</span>
+          <button type="button" class="dlg-btn" data-msgpopup-close>Close</button>
+      </div>
+    </div>
+  `;
 
-  let htmlCode = '\
-        <div style="font-weight: bold; font-size: 120%; padding-bottom: 10px;">General information about the Overleaf integration</div>\
-        <div style="font-weight: normal; padding-bottom: 5px;">\
-            <p>This version of <em>Overleaf</em> is currently in a <strong>testing phase</strong>.\
-            This means that not all features might work as expected. If you run into any problems, feel free to contact us!</p>\
-            <p><strong>Please note the following limitations when sharing projects:</strong>\
-                <ul>\
-                    <li>Sharing only works amongst <em>sciebo</em> users</li>\
-                    <li>Target users of sharing must have used Overleaf <strong>at least once</strong></li>\
-                </ul>\
-            </p>\
-            <p>Also note that your project files will <strong>not</strong> appear in your <em>sciebo</em> files.\
-            If you want to save your project files to <em>sciebo</em>, export the project as a <strong>.zip</strong> file and upload it to manually.\
-        </div>\
-        <div style="display: grid; grid-template-columns: max-content auto min-content; align-items: center;">\
-            <span style="font-size: 85%; font-weight: normal;"><strong>Overleaf version:</strong> ${OVERLEAF_VERSION} | <strong>Integration version:</strong> ${INTEGRATION_VERSION}</span>\
-            <span>&nbsp;</span>\
-            <button type="button" class="dlg-btn" data-msgpopup-close>Close</button>\
-        </div>\
-    ';
-
-  htmlCode = htmlCode.replace("${OVERLEAF_VERSION}", OVERLEAF_VERSION);
-  htmlCode = htmlCode.replace("${INTEGRATION_VERSION}", INTEGRATION_VERSION);
-
-  $().msgpopup({
-    text: htmlCode,
-    time: false,
-    x: false,
-    closeFunc: () => { _bindShowInfoDialog(); },
-  });
+  if ($.find("#info-dialog").length === 0) {
+    $().msgpopup({
+      text: htmlCode,
+      time: false,
+      x: false
+    });
+  }
 }
-
-function _bindShowInfoDialog() {
-  $("#nav-item-support-lnk").unbind("click");
-  $("#nav-item-support-lnk").click((event) => {
-    event.preventDefault();
-    _showInfoDialog();
-  });
-}
-
-function _unbindShowInfoDialog() {
-  $("#nav-item-support-lnk").unbind('click');
-  $("#nav-item-support-lnk").click((event) => {
-    event.preventDefault();
-  });
-}
-
 
 // Main modifiers
 function addHeaderItems() {
@@ -57,7 +39,7 @@ function addHeaderItems() {
     if (navBar.find("#nav-item-support").length === 0) {
       navBar.append(`
         <li role="none" class="nav-item subdued" id="nav-item-support">
-            <a id="nav-item-support-lnk" role="menuitem" href="#" class="nav-link" rel="noopener noreferrer">Help</a>
+            <a role="menuitem" href="#" class="nav-link" rel="noopener noreferrer" onclick="showInfoDialog()">Help</a>
         </li>
     `);
     }
@@ -116,7 +98,5 @@ $(window).on("load", function() {
     addHeaderItems();
     adjustNavigationItems();
     addVersionToFooter();
-
-    _bindShowInfoDialog();
   });
 });
