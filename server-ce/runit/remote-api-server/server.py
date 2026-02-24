@@ -93,7 +93,11 @@ def create_user(client):
 
   _debug_print(f'Creating user: {email}, password: {password}')
 
-  result = subprocess.run(['grunt', 'user:create', '--email=' + email], universal_newlines=True, stdout=subprocess.PIPE,
+  result = subprocess.run(['node', 'modules/server-ce-scripts/scripts/create-user.mjs', '--email=' + email],
+                          user='www-data',
+                          cwd='/overleaf/services/web',
+                          universal_newlines=True,
+                          stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT)
   if result.returncode == 0:
     _debug_print(f'User created')
@@ -124,7 +128,13 @@ def delete_user(client):
 
   _debug_print(f'Deleting user: {email}')
 
-  result = subprocess.run(['grunt', 'user:delete', '--email=' + email])
+  result = subprocess.run(['node', 'modules/server-ce-scripts/scripts/delete-user.mjs', '--email=' + email],
+                          user='www-data',
+                          cwd='/overleaf/services/web',
+                          universal_newlines=True,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT
+                          )
   if result.returncode == 0:
     _debug_print('User deleted')
   else:

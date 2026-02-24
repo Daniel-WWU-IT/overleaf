@@ -26,14 +26,6 @@
         ```
 - Add `server-ce/runit/remote-api-server` and `server-ce/runit/ui-proxy`
     - Make sure that the `run` files have the executable flag set
-- Modify `server-ce/bin/grunt` as follows:
-    - Add new case entry
-        ```
-        user:create)
-          exec /sbin/setuser www-data node modules/server-ce-scripts/scripts/create-user.mjs "$@"
-          ;;
-        ```
-      to create regular users via command-line
 - Change the following settings in `server-ce/config/settings.js`:
   - Disable CSP by replacing the `csp` block as follows:
     ```
