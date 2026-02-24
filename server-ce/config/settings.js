@@ -218,7 +218,7 @@ const settings = {
   },
 
   csp: {
-    enabled: false,
+    enabled: process.env.OVERLEAF_CSP_ENABLED !== 'false',
   },
 
   rateLimit: {
@@ -467,6 +467,8 @@ switch (process.env.OVERLEAF_FILESTORE_BACKEND) {
       },
     }
 }
+
+settings.converter = process.env.CONVERTER || 'pdftocairo'
 
 if (
   !settings.trustedProxyIps.includes('loopback') &&

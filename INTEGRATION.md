@@ -1,7 +1,7 @@
 # Overleaf Nextcloud Integration - v2.0.0
 
 ## Changes applied to Overleaf
-- Build custom base image to use the full Texlive distribution by applying the following changes to `server-ce/Dockerfile-base`:
+- **OPTIONAL** Build custom base image to use the full Texlive distribution by applying the following changes to `server-ce/Dockerfile-base`:
     - Set `selected_scheme` to `scheme-full` (located within the TexLive installation block)
     - Update TexLive by adding this directly after the TexLive installation block:
       ```
@@ -9,7 +9,7 @@
       &&  tlmgr update --all
       ```
 - Modifications to the main Docker file `server-ce/Dockerfile`:
-    - Use the custom base image by modifying ARG `OVERLEAF_BASE_TAG` accordingly
+    - **OPTIONAL** Use the custom base image by modifying ARG `OVERLEAF_BASE_TAG` accordingly (see above)
     - Install additional Python modules by adding this directly above the `WORKDIR` directive:
         ```
         RUN apt-get update \
@@ -20,19 +20,12 @@
         COPY server-ce/runit/ui-proxy/js/*.js /overleaf/services/web/public/js/ui-proxy/
         COPY server-ce/runit/ui-proxy/css/*.css /overleaf/services/web/public/stylesheets/ui-proxy/
         ```
-    - To add additional Tex packages, you can use the following command:
+    - **OPTIONAL** To add additional Tex packages, you can use the following command:
         ```
         RUN tlmgr install <package>
         ```
 - Add `server-ce/runit/remote-api-server` and `server-ce/runit/ui-proxy`
     - Make sure that the `run` files have the executable flag set
-- Change the following settings in `server-ce/config/settings.js`:
-  - Disable CSP by replacing the `csp` block as follows:
-    ```
-    csp: {
-        enabled: false,
-    },
-    ```
 - Update `server-ce/nginx/overleaf.conf` as follows:
   - Add `proxy_hide_header X-Frame-Options;` for locations `/` and `/socket.io` to allow iframe embedding
   - Route `GET` requests through the UI proxy by changing the `proxy_pass` option of location `/` to:
@@ -60,6 +53,9 @@
     }
     ```
   - Replace all instances of `127.0.0.1` by `localhost`
+
+## Deployment notes
+When deploying this modified Overleaf version, it is necessary to provide the `server-ce/settings/integration.env` environment variables file to the Docker containers. This file contains several settings that must be set as-is in order for the integrated version of Overleaf to run.
 
 ## How to use
 ### Registration/User management service
