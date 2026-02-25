@@ -1,4 +1,12 @@
 // Main modifiers
+function adjustSettingsDialog() {
+  const settingsDialogBody = $("div[class='ide-settings-modal-body modal-body']");
+  if (settingsDialogBody.length > 0) {
+    settingsDialogBody.find("a[href='/user/settings']")?.hide();
+    settingsDialogBody.find("a[href='/user/subscription']")?.hide();
+  }
+}
+
 function adjustMenuItems() {
   // Change the "Documentation" link
   const documentationMenuItem = $("div:contains('Documentation')");
@@ -7,7 +15,8 @@ function adjustMenuItems() {
     const parent = documentationMenuItem.closest("li");
     link?.attr("href", "https://www.overleaf.com/learn");
     link?.attr("target", "_blank");
-    parent?.next("li")?.hide();
+    parent?.next("li[class='dropdown-divider']")?.hide();
+    link?.next("li[class='dropdown-divider']")?.hide();
   }
 
   // Hide the "Contact us" item
@@ -20,6 +29,7 @@ function adjustMenuItems() {
 // Entry hook
 $(window).on("load", function() {
   addMutationsObserver(document.body, () => {
+    adjustSettingsDialog();
     adjustMenuItems();
   });
 });
