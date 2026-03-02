@@ -36,6 +36,11 @@ function showInfoDialog() {
 function addHeaderItems() {
   const navBar = $("ul[role='menubar']");
   if (navBar.length > 0) {
+    const navItemProjects = navBar.find("li[class='nav-item-projects nav-item']");
+    if (navItemProjects.length > 0) {
+      navItemProjects.hide();
+    }
+
     if (navBar.find("#nav-item-support").length === 0) {
       navBar.append(`
         <li role="none" class="nav-item subdued" id="nav-item-support">
