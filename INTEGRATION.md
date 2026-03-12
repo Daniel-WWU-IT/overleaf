@@ -52,7 +52,7 @@
     ```
 
 ## Deployment notes
-When deploying this modified Overleaf version, it is necessary to provide the `server-ce/settings/integration.env` environment variables file to the Docker containers. This file contains several settings that must be set as-is in order for the integrated version of Overleaf to run.
+When deploying this modified Overleaf version, it is necessary to provide the `server-ce/config/integration.env` environment variables file to the Docker containers. This file contains several settings that must be set as-is in order for the integrated version of Overleaf to run.
 
 ## How to use
 ### Registration/User management service
