@@ -86,7 +86,7 @@ def set_password(client, link, email, password):
 
 
 def create_user(client):
-  email = flask.request.args.get('email', '')
+  email = flask.request.args.get('email', '').lower()
   if email == '':
     _error(client, 'Email address missing', 400)
   password = ''.join(random.choices(string.ascii_letters + string.digits, k=32))  # We just generate a random password
@@ -122,7 +122,7 @@ def create_user(client):
 
 
 def delete_user(client):
-  email = flask.request.args.get('email', '')
+  email = flask.request.args.get('email', '').lower()
   if email == '':
     _error(client, 'Email address missing', 400)
 
