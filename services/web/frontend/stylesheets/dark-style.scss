@@ -83,3 +83,14 @@ footer.site-footer {
   background-color: var(--bg-dark-primary);
   border-top: 1px solid var(--bg-dark-primary);
 }
+
+// Welcome page
+#project-list-root {
+  --bs-heading-color: var(--content-primary-dark);
+
+  color: var(--content-primary-dark);
+}
+
+#project-list-root > .project-list-react.content {
+  background-color: var(--bg-dark-secondary);
+}
