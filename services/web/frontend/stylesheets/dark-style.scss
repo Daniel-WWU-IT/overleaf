@@ -1,0 +1,5 @@
+// Overrides for an overall dark style
+.website-redesign-navbar,
+.website-redesign .navbar-default {
+  @include navbar-dark;
+}

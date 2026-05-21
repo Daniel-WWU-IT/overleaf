@@ -50,6 +50,12 @@
         proxy_send_timeout 10m;
     }
     ```
+- #### **OPTIONAL |** Apply dark mode changes:
+  - Copy the dark mode stylesheet `services/web/frontend/stylsheets/dark-style.scss` into the same location
+  - Add the following line at the very end of `services/web/frontend/stylsheets/main-style.scss` to include the dark mode changes:
+    ```
+    @import 'dark-style';
+    ```
 
 ## Deployment notes
 When deploying this modified Overleaf version, it is necessary to provide the `server-ce/config/integration.env` environment variables file to the Docker containers. This file contains several settings that must be set as-is in order for the integrated version of Overleaf to run.
