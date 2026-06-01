@@ -64,7 +64,7 @@ services:
         volumes:
             - nextcloud:/var/www/html
             - ./.data/custom_apps:/var/www/html/custom_apps
-            - ../../overleaf-nextcloud:/var/www/html/custom_apps/overleaf_nextcloud
+            - ../../overleaf-nextcloud:/var/www/html/custom_apps/overleafv6_nextcloud
 
     proxy:
         image: nginx:alpine
