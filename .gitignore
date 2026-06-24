@@ -45,3 +45,4 @@ lerna-debug.log*
 
 # Python virtual env
 venv
+.venv
