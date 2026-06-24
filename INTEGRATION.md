@@ -1,4 +1,4 @@
-# Overleaf Nextcloud Integration - v2.0.0
+# Overleaf Nextcloud Integration - v2.1.0
 
 ## Changes applied to Overleaf
 - #### **OPTIONAL |** Build custom base image to use the full Texlive distribution by applying the following changes to `server-ce/Dockerfile-base`:
