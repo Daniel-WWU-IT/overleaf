@@ -241,7 +241,7 @@ function personalAndGroupSubscriptions(userId) {
 function oldDebugProjects(userId) {
   return {
     key: `old-debug-projects-${userId}`,
-    async create(userId) {
+    async create() {
       return await NotificationsHandler.promises.createNotification(
         userId,
         this.key,
@@ -260,6 +260,7 @@ function oldDebugProjects(userId) {
   }
 }
 
+/** @type {Record<string, any>} */
 const NotificationsBuilder = {
   // Note: notification keys should be url-safe
   dropboxUnlinkedDueToLapsedReconfirmation(userId) {
@@ -291,6 +292,7 @@ const NotificationsBuilder = {
   },
 }
 
+/** @type {Record<string, any>} */
 NotificationsBuilder.promises = {
   dropboxUnlinkedDueToLapsedReconfirmation,
   redundantPersonalSubscription,

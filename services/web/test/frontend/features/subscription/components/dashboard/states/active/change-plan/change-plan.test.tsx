@@ -27,6 +27,7 @@ describe('<ChangePlanModal />', function () {
   beforeEach(function () {
     this.locationWrapperSandbox = sinon.createSandbox()
     this.locationWrapperStub = this.locationWrapperSandbox.stub(location)
+    this.locationWrapperStub.toString.returns('https://www.test-overleaf.com/')
   })
 
   afterEach(function () {
@@ -214,9 +215,9 @@ describe('<ChangePlanModal />', function () {
       screen.getByRole('button', { name: 'Processing…' })
 
       // page is reloaded on success
-      const reloadStub = this.locationWrapperStub.reload
+      const replaceStub = this.locationWrapperStub.replace
       await waitFor(() => {
-        expect(reloadStub).to.have.been.called
+        expect(replaceStub).to.have.been.called
       })
     })
 
@@ -304,9 +305,9 @@ describe('<ChangePlanModal />', function () {
       screen.getByRole('button', { name: 'Processing…' })
 
       // page is reloaded on success
-      const reloadStub = this.locationWrapperStub.reload
+      const replaceStub = this.locationWrapperStub.replace
       await waitFor(() => {
-        expect(reloadStub).to.have.been.called
+        expect(replaceStub).to.have.been.called
       })
     })
 
@@ -410,8 +411,7 @@ describe('<ChangePlanModal />', function () {
       renderActiveSubscription(annualActiveSubscription)
       await openModal()
 
-      const professionalPlanOption =
-        within(modal).getByLabelText('Professional')
+      const professionalPlanOption = within(modal).getByLabelText('Pro')
       fireEvent.click(professionalPlanOption)
 
       await within(modal).findByText(professionalPlanCollaboratorText)
@@ -461,7 +461,7 @@ describe('<ChangePlanModal />', function () {
       ) as HTMLInputElement
       expect(standardPlanRadioInput.checked).to.be.true
       let professionalPlanRadioInput = within(modal).getByLabelText(
-        'Professional'
+        'Pro'
       ) as HTMLInputElement
       expect(professionalPlanRadioInput.checked).to.be.false
 
@@ -472,7 +472,7 @@ describe('<ChangePlanModal />', function () {
       ) as HTMLInputElement
       expect(standardPlanRadioInput.checked).to.be.false
       professionalPlanRadioInput = within(modal).getByLabelText(
-        'Professional'
+        'Pro'
       ) as HTMLInputElement
       expect(professionalPlanRadioInput.checked).to.be.true
 
@@ -516,7 +516,7 @@ describe('<ChangePlanModal />', function () {
       await openModal()
 
       const standardPlanRadioInput = within(modal).getByLabelText(
-        'Professional'
+        'Pro'
       ) as HTMLInputElement
       expect(standardPlanRadioInput.checked).to.be.true
     })
@@ -537,9 +537,9 @@ describe('<ChangePlanModal />', function () {
       screen.getByRole('button', { name: 'Processing…' })
 
       // page is reloaded on success
-      const reloadStub = this.locationWrapperStub.reload
+      const replaceStub = this.locationWrapperStub.replace
       await waitFor(() => {
-        expect(reloadStub).to.have.been.called
+        expect(replaceStub).to.have.been.called
       })
     })
 

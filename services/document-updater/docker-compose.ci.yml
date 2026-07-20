@@ -4,13 +4,13 @@
 
 services:
   test_unit:
-    image: ci/$PROJECT_NAME:$BRANCH_NAME-$BUILD_NUMBER
+    image: ci/$PROJECT_NAME:$BRANCH_NAME_TAG_SAFE-$BUILD_NUMBER
     user: node
     volumes:
       - ./reports:/overleaf/services/document-updater/reports
       - ../../bin/shared/wait_for_it:/overleaf/bin/shared/wait_for_it
     entrypoint: /overleaf/bin/shared/wait_for_it mongo:27017 --timeout=60 --
-    command: npm run test:unit:_run
+    command: yarn run test:unit:_run
     environment:
       CI:
       MONGO_CONNECTION_STRING: mongodb://mongo/test-overleaf
@@ -28,10 +28,10 @@ services:
         condition: service_healthy
 
   test_acceptance:
-    build: .
-    image: ci/$PROJECT_NAME:$BRANCH_NAME-$BUILD_NUMBER
+    image: ci/$PROJECT_NAME:$BRANCH_NAME_TAG_SAFE-$BUILD_NUMBER
     environment:
       CI:
+      RETRIES:
       REDIS_HOST: redis_test
       QUEUES_REDIS_HOST: redis_test
       HISTORY_REDIS_HOST: redis_test
@@ -52,18 +52,18 @@ services:
         condition: service_healthy
     user: node
     entrypoint: /overleaf/bin/shared/wait_for_it mongo:27017 --timeout=60 --
-    command: npm run test:acceptance
+    command: yarn run test:acceptance
 
   tar:
     build: .
-    image: ci/$PROJECT_NAME:$BRANCH_NAME-$BUILD_NUMBER
+    image: ci/$PROJECT_NAME:$BRANCH_NAME_TAG_SAFE-$BUILD_NUMBER
     volumes:
       - ./:/tmp/build/
     command: tar -czf /tmp/build/build.tar.gz --exclude=build.tar.gz --exclude-vcs .
     user: root
 
   redis_test:
-    image: redis:7.4.3
+    image: redis:7.4.8
     healthcheck:
       test: ping="$$(redis-cli ping)" && [ "$$ping" = 'PONG' ]
       interval: 1s

@@ -22,6 +22,7 @@ import StatsManager from './StatsManager.js'
 import SafeReader from './SafeReader.js'
 import LatexMetrics from './LatexMetrics.js'
 import { callbackifyMultiResult } from '@overleaf/promise-utils'
+import * as HistoryResourceWriter from './HistoryResourceWriter.js'
 
 const { downloadLatestCompileCache, downloadOutputDotSynctexFromCompileCache } =
   CLSICacheHandler
@@ -104,13 +105,43 @@ async function doCompile(request, stats, timings) {
     'syncing resources to disk'
   )
 
-  let resourceList
+  let resourceList, baseHistoryVersion
   try {
-    // NOTE: resourceList is insecure, it should only be used to exclude files from the output list
-    resourceList = await ResourceWriter.promises.syncResourcesToDisk(
-      request,
-      compileDir
-    )
+    if (request.isCompileFromHistory) {
+      ;({ resourceList, baseHistoryVersion } =
+        await HistoryResourceWriter.syncResourcesToDisk(
+          projectId,
+          userId,
+          request,
+          compileDir,
+          timings
+        ))
+    } else {
+      // NOTE: resourceList is insecure, it should only be used to exclude files from the output list
+      resourceList = await ResourceWriter.promises.syncResourcesToDisk(
+        request,
+        compileDir
+      )
+
+      // apply a series of file modifications/creations for draft mode and tikz
+      if (request.draft) {
+        await DraftModeManager.promises.injectDraftMode(
+          Path.join(compileDir, request.rootResourcePath)
+        )
+      }
+
+      const needsMainFile = await TikzManager.promises.checkMainFile(
+        compileDir,
+        request.rootResourcePath,
+        resourceList
+      )
+      if (needsMainFile) {
+        await TikzManager.promises.injectOutputFile(
+          compileDir,
+          request.rootResourcePath
+        )
+      }
+    }
   } catch (error) {
     if (error instanceof Errors.FilesOutOfSyncError) {
       OError.tag(error, 'files out of sync, please retry', {
@@ -161,23 +192,9 @@ async function doCompile(request, stats, timings) {
     }
   }
 
-  // apply a series of file modifications/creations for draft mode and tikz
-  if (request.draft) {
-    await DraftModeManager.promises.injectDraftMode(
-      Path.join(compileDir, request.rootResourcePath)
-    )
-  }
-
-  const needsMainFile = await TikzManager.promises.checkMainFile(
-    compileDir,
-    request.rootResourcePath,
-    resourceList
-  )
-  if (needsMainFile) {
-    await TikzManager.promises.injectOutputFile(
-      compileDir,
-      request.rootResourcePath
-    )
+  // Pass through checkpoint setting
+  if (request.enableCheckpoint) {
+    env.ENABLE_CHECKPOINT = '1'
   }
 
   const compileStart = Date.now()
@@ -326,7 +343,7 @@ async function doCompile(request, stats, timings) {
     )
   }
 
-  return { outputFiles, buildId }
+  return { outputFiles, buildId, baseHistoryVersion }
 }
 
 async function _saveOutputFiles({
@@ -371,7 +388,17 @@ async function _readFdbFile(compileDir) {
 
 async function stopCompile(projectId, userId) {
   const compileName = getCompileName(projectId, userId)
+  const lock = LockManager.getExistingLock(getCompileDir(projectId, userId))
+  let lockReleased
+  if (lock) {
+    lockReleased = lock.waitForRelease()
+  } else {
+    if (!LatexRunner.isRunning(compileName)) return
+    logger.warn({ projectId, userId }, 'found running compile without lock')
+    lockReleased = Promise.resolve()
+  }
   await LatexRunner.promises.killLatex(compileName)
+  await lockReleased
 }
 
 async function clearProject(projectId, userId) {
@@ -604,7 +631,8 @@ async function _runSynctex(projectId, userId, command, opts) {
           imageName || defaultImageName,
           timeout,
           {},
-          compileGroup
+          compileGroup,
+          null
         )
         return {
           stdout,
@@ -652,7 +680,8 @@ async function wordcount(projectId, userId, filename, image) {
       image,
       timeout,
       {},
-      compileGroup
+      compileGroup,
+      null
     )
     const results = _parseWordcountFromOutput(stdout)
     logger.debug(
@@ -798,6 +827,7 @@ function _emitMetrics(request, status, stats, timings) {
     draft: request.draft ? 'true' : 'false',
     stop_on_first_error: request.stopOnFirstError ? 'true' : 'false',
     passes,
+    type: request.syncType,
   })
 
   if (timings.sync != null) {
@@ -837,6 +867,7 @@ function _emitMetrics(request, status, stats, timings) {
   if (timings.compileE2E != null) {
     ClsiMetrics.e2eCompileDurationSeconds.observe(
       {
+        compileFromHistory: request.isCompileFromHistory,
         compile: request.metricsOpts.compile,
         group: request.compileGroup,
       },

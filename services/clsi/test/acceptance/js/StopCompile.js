@@ -57,4 +57,17 @@ describe('Stop compile', function () {
     expect(this.compileResult.body.compile.status).to.equal('terminated')
     expect(this.compileResult.body.compile.error).to.equal('terminated')
   })
+
+  it('should return the log output file name', function () {
+    const outputFilePaths = this.compileResult.body.compile.outputFiles.map(
+      x => x.path
+    )
+    outputFilePaths.should.include('output.synctex(busy)') // compile was still pending
+    outputFilePaths.should.include('output.log')
+  })
+
+  it('should work with not pending compile', async function () {
+    const res = await Client.stopCompile(this.project_id)
+    expect(res.status).to.equal(204)
+  })
 })

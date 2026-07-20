@@ -23,9 +23,17 @@ import {
   pasteWithoutFormatting,
   pasteWithFormatting,
 } from '../commands/clipboard'
+import { showClipboardPasteErrorToast } from '../components/clipboard-toasts'
 import { isVisual } from '../extensions/visual/visual'
 import { useEditorContext } from '@/shared/context/editor-context'
 import { useTrackingChangesMode } from '@/shared/hooks/use-tracking-changes-mode'
+import {
+  sendContextMenuEvent,
+  ContextMenuItemSegmentation,
+} from '../utils/context-menu-analytics'
+import { isCursorOnEmptyLine } from '../utils/is-cursor-on-empty-line'
+import { selectAll } from '@codemirror/commands'
+import { useTrackedChangesActions } from '@/features/review-panel/hooks/use-tracked-changes-actions'
 
 export const useContextMenuItems = () => {
   const view = useCodeMirrorViewContext()
@@ -34,18 +42,26 @@ export const useContextMenuItems = () => {
   const { wantTrackChanges } = useEditorPropertiesContext()
   const { syncToPdf, syncToPdfInFlight, canSyncToPdf } = useSynctex()
   const { pdfUrl, pdfViewer } = useDetachCompileContext()
-  const { detachRole } = useLayoutContext()
+  const {
+    detachRole,
+    changeLayout,
+    pdfLayout,
+    view: ideView,
+  } = useLayoutContext()
   const visualPreviewEnabled = useFeatureFlag('visual-preview')
   const { t } = useTranslation()
   const { shortcuts } = useCommandRegistry()
   const { features } = useProjectContext()
   const requestedPdfSyncRef = useRef(false)
-  const { setShowUpgradeModal } = useEditorContext()
+  const { setUpgradeTrackChangesModal } = useEditorContext()
   const trackingChangesMode = useTrackingChangesMode()
   const isReview = trackingChangesMode === 'review'
+  const { changesInSelection, acceptChangesHandler, rejectChangesHandler } =
+    useTrackedChangesActions()
 
   const closeMenu = useCallback(() => {
     view.dispatch({ effects: closeContextMenuEffect.of(null) })
+    view.focus()
   }, [view])
 
   // Handle closing the menu when it loses focus, e.g. click outside the editor
@@ -71,57 +87,33 @@ export const useContextMenuItems = () => {
 
   const hasSelection = !state.selection.main.empty
   const canEdit = permissions.write || permissions.trackedWrite
+
+  // Determine layout states for PDF sync functionality
+  const isPdfDetached = detachRole === 'detacher'
+  const isEditorOnly =
+    pdfLayout === 'flat' && ideView === 'editor' && !isPdfDetached
+
   const jumpToLocationInPdfEnabled =
-    pdfUrl &&
-    pdfViewer !== 'native' &&
-    !detachRole &&
-    !visualPreviewEnabled &&
-    canSyncToPdf
+    pdfUrl && pdfViewer !== 'native' && !visualPreviewEnabled && canSyncToPdf
 
   const wrapForContextMenu = useCallback(
-    (command: () => Promise<boolean> | boolean) => async () => {
-      const result = await command()
-      if (result !== false) {
-        view.focus()
-        closeMenu()
-      }
-    },
+    (
+      item: ContextMenuItemSegmentation,
+      command: () => Promise<boolean> | boolean
+    ) =>
+      async () => {
+        sendContextMenuEvent('menu-click', {
+          location: 'editor-context-menu',
+          item,
+        })
+        const result = await command()
+        if (result !== false) {
+          view.focus()
+          closeMenu()
+        }
+      },
     [view, closeMenu]
   )
-
-  const inVisualMode = isVisual(view)
-
-  const handleCut = wrapForContextMenu(() => cutSelection(view))
-  const handleCopy = wrapForContextMenu(() => copySelection(view))
-  const handlePaste = wrapForContextMenu(() =>
-    inVisualMode ? pasteWithFormatting(view) : pasteWithoutFormatting(view)
-  )
-  const handlePasteSpecial = wrapForContextMenu(() =>
-    inVisualMode ? pasteWithoutFormatting(view) : pasteWithFormatting(view)
-  )
-  const handleDelete = wrapForContextMenu(() => commands.deleteSelection(view))
-
-  const handleToggleTrackChanges = wrapForContextMenu(() => {
-    // Matching the logic in review toggle to ensure consistency for server pro
-    if (!features.trackChanges && !isReview) {
-      setShowUpgradeModal(true)
-      return true
-    }
-    window.dispatchEvent(new Event('toggle-track-changes'))
-    return true
-  })
-
-  const handleComment = wrapForContextMenu(() => {
-    commands.addComment()
-    return true
-  })
-
-  // Sync-to-PDF is special: it needs to wait for async completion before closing
-  const handleSyncToPdf = useCallback(() => {
-    requestedPdfSyncRef.current = true
-    syncToPdf()
-    view.focus()
-  }, [syncToPdf, view])
 
   const getShortcut = useCallback(
     (id: string) => {
@@ -130,6 +122,89 @@ export const useContextMenuItems = () => {
     },
     [shortcuts]
   )
+
+  const inVisualMode = isVisual(view)
+
+  const handleCut = wrapForContextMenu('cut', () => cutSelection(view))
+  const handleCopy = wrapForContextMenu('copy', () => copySelection(view))
+  const handlePaste = wrapForContextMenu('paste', async () => {
+    const result = await (inVisualMode
+      ? pasteWithFormatting(view)
+      : pasteWithoutFormatting(view))
+    if (result === false) {
+      showClipboardPasteErrorToast(getShortcut('paste'))
+    }
+    return result
+  })
+  const handlePasteSpecial = wrapForContextMenu(
+    inVisualMode ? 'paste-without-formatting' : 'paste-with-formatting',
+    async () => {
+      const result = await (inVisualMode
+        ? pasteWithoutFormatting(view)
+        : pasteWithFormatting(view))
+      if (result === false) {
+        showClipboardPasteErrorToast(getShortcut('paste'))
+      }
+      return result
+    }
+  )
+  const handleSelectAll = wrapForContextMenu('select-all', () =>
+    selectAll(view)
+  )
+  const handleDelete = wrapForContextMenu('delete', () =>
+    commands.deleteSelection(view)
+  )
+
+  const handleToggleTrackChanges = wrapForContextMenu(
+    wantTrackChanges ? 'back-to-editing' : 'suggest-edits',
+    () => {
+      // Matching the logic in review toggle to ensure consistency for server pro
+      if (!features.trackChanges && !isReview) {
+        setUpgradeTrackChangesModal({
+          show: true,
+          location: 'editor-context-menu',
+        })
+        return true
+      }
+      window.dispatchEvent(new Event('toggle-track-changes'))
+      return true
+    }
+  )
+
+  const handleComment = wrapForContextMenu('comment', () => {
+    commands.addComment('editor-context-menu')
+    return true
+  })
+
+  const handleAcceptChanges = wrapForContextMenu('accept-changes', () => {
+    acceptChangesHandler()
+    return true
+  })
+
+  const handleRejectChanges = wrapForContextMenu('reject-changes', () => {
+    rejectChangesHandler()
+    return true
+  })
+
+  // Sync-to-PDF is special: it needs to wait for async completion before closing
+  const handleSyncToPdf = useCallback(() => {
+    // Switch to split view only when in editor-only mode with non-detached PDF
+    if (isEditorOnly) {
+      changeLayout('sideBySide')
+    }
+
+    sendContextMenuEvent('menu-click', {
+      location: 'editor-context-menu',
+      item: 'jump-to-location-in-pdf',
+    })
+    sendContextMenuEvent('jump-to-location', {
+      method: 'editor-context-menu',
+      direction: 'code-location-in-pdf',
+    })
+    requestedPdfSyncRef.current = true
+    syncToPdf()
+    view.focus()
+  }, [syncToPdf, view, changeLayout, isEditorOnly])
 
   return {
     closeMenu,
@@ -166,6 +241,13 @@ export const useContextMenuItems = () => {
         shortcut: inVisualMode ? getShortcut('paste-special') : undefined,
       },
       {
+        label: t('select_all'),
+        handler: handleSelectAll,
+        disabled: false,
+        show: true,
+        shortcut: getShortcut('select-all'),
+      },
+      {
         label: t('delete'),
         handler: handleDelete,
         disabled: !hasSelection,
@@ -191,9 +273,23 @@ export const useContextMenuItems = () => {
       {
         label: t('comment'),
         handler: handleComment,
-        disabled: !hasSelection,
+        disabled: isCursorOnEmptyLine(state),
         show: permissions.comment,
         shortcut: getShortcut('insert-comment'),
+      },
+      {
+        label: t('accept_selected_changes'),
+        handler: handleAcceptChanges,
+        disabled: false,
+        show: permissions.write && changesInSelection.length > 0,
+        shortcut: undefined,
+      },
+      {
+        label: t('reject_selected_changes'),
+        handler: handleRejectChanges,
+        disabled: false,
+        show: permissions.write && changesInSelection.length > 0,
+        shortcut: undefined,
       },
     ].filter(item => item.show),
   }

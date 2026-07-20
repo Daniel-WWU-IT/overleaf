@@ -6,16 +6,25 @@ const settings = require('@overleaf/settings')
 // of object)
 class BackwardCompatibleError extends OError {
   /**
-   * @param {string | { message: string, info?: Object }} messageOrOptions
+   * @param {string | { message?: string, info?: Object, cause?: unknown }} messageOrOptions
+   * @param {Object} [info]
+   * @param {unknown} [cause]
    */
-  constructor(messageOrOptions) {
+  constructor(messageOrOptions, info, cause) {
     if (typeof messageOrOptions === 'string') {
-      super(messageOrOptions)
-    } else if (messageOrOptions) {
-      const { message, info } = messageOrOptions
-      super(message, info)
+      super(messageOrOptions, info, cause)
+    } else if (
+      typeof messageOrOptions === 'object' &&
+      messageOrOptions !== null
+    ) {
+      const {
+        message,
+        info: optionsInfo,
+        cause: optionsCause,
+      } = messageOrOptions
+      super(message, optionsInfo, optionsCause)
     } else {
-      super()
+      super(undefined, info, cause)
     }
   }
 }
@@ -47,11 +56,11 @@ class DuplicateNameError extends OError {}
 
 class InvalidNameError extends BackwardCompatibleError {}
 
-class IndeterminateInvoiceError extends OError {}
-
 class UnsupportedFileTypeError extends BackwardCompatibleError {}
 
 class FileTooLargeError extends BackwardCompatibleError {}
+
+class DocumentConversionError extends OError {}
 
 class UnsupportedExportRecordsError extends BackwardCompatibleError {}
 
@@ -122,6 +131,13 @@ class SAMLAuthenticationError extends OError {
     return 'saml_auth_error'
   }
 }
+
+class SAMLCommonsReconfirmationUnableToFindUserError extends SAMLAuthenticationError {
+  get i18nKey() {
+    return 'saml_commons_reconfirmation_unable_to_find_user'
+  }
+}
+
 class SAMLAssertionAudienceMismatch extends SAMLAuthenticationError {}
 
 class SAMLAuthenticationRequiredError extends SAMLAuthenticationError {
@@ -222,6 +238,18 @@ class SAMLDomainCaptureManagedUserMissingEmailError extends OError {}
 class SAMLGroupMemberLimitReachedError extends OError {}
 
 class SAMLDomainCaptureManagedOptInUserMissingEmailError extends SAMLDomainCaptureError {}
+
+class SAMLSessionProviderDataMissing extends SAMLAuthenticationError {
+  get i18nKey() {
+    return 'try_again'
+  }
+}
+
+class SAMLDomainCaptureEmailDomainMismatchError extends SAMLDomainCaptureError {
+  get i18nKey() {
+    return 'invalid_organization_email'
+  }
+}
 
 class SAMLSessionDataMissing extends BackwardCompatibleError {
   constructor(arg) {
@@ -359,6 +387,8 @@ class ConcurrentLoadingOfDocsDetectedError extends OError {
   }
 }
 
+class DomainAlreadyExistsError extends OErrorV2CompatibleError {}
+
 module.exports = {
   OError,
   BackwardCompatibleError,
@@ -371,6 +401,7 @@ module.exports = {
   InvalidNameError,
   UnsupportedFileTypeError,
   FileTooLargeError,
+  DocumentConversionError,
   UnsupportedExportRecordsError,
   V1HistoryNotSyncedError,
   ProjectHistoryDisabledError,
@@ -378,13 +409,14 @@ module.exports = {
   UnconfirmedEmailError,
   EmailExistsError,
   InvalidError,
-  IndeterminateInvoiceError,
   NotInV2Error,
   OutputFileFetchFailedError,
   SAMLAssertionAudienceMismatch,
   SAMLAuthenticationRequiredError,
+  SAMLCommonsReconfirmationUnableToFindUserError,
   SAMLCommonsUnavailable,
   SAMLDomainCaptureEmailExistsError,
+  SAMLDomainCaptureEmailDomainMismatchError,
   SAMLDomainCaptureError,
   SAMLDomainCaptureJoiningError,
   SAMLDomainCaptureMissingSessionDataError,
@@ -393,6 +425,7 @@ module.exports = {
   SAMLEmailNotAffiliatedError,
   SAMLEmailAffiliatedWithAnotherInstitutionError,
   SAMLSessionDataMissing,
+  SAMLSessionProviderDataMissing,
   SAMLAuthenticationError,
   SAMLGroupSSOLoginIdentityMismatchError,
   SAMLGroupSSOLoginIdentityNotFoundError,
@@ -431,4 +464,5 @@ module.exports = {
   NonDeletableEntityError,
   FoundConnectedClientsError,
   ConcurrentLoadingOfDocsDetectedError,
+  DomainAlreadyExistsError,
 }

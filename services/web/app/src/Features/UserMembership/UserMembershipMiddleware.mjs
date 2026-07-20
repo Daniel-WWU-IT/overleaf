@@ -12,7 +12,8 @@ import TemplatesManager from '../Templates/TemplatesManager.mjs'
 import { z, zz, parseReq } from '../../infrastructure/Validation.mjs'
 import AdminAuthorizationHelper from '../Helpers/AdminAuthorizationHelper.mjs'
 
-const { useAdminCapabilities } = AdminAuthorizationHelper
+const { useAdminCapabilities, useNonAdminDomainCapabilities } =
+  AdminAuthorizationHelper
 // set of middleware arrays or functions that checks user access to an entity
 // (publisher, institution, group, template, etc.)
 const UserMembershipMiddleware = {
@@ -36,7 +37,12 @@ const UserMembershipMiddleware = {
     requireEntity(),
   ],
 
-  requireEntityAccess: ({ entityName, adminCapability }) => [
+  requireEntityAccess: (
+    /** @type {{ entityName: any; adminCapability?: any }} */ {
+      entityName,
+      adminCapability,
+    }
+  ) => [
     AuthenticationController.requireLogin(),
     fetchEntityConfig(entityName),
     fetchEntity(),
@@ -50,7 +56,7 @@ const UserMembershipMiddleware = {
     ),
   ],
 
-  requireEntityAccessOrAdminAccess: entityName => [
+  requireEntityAccessOrAdminAccess: (/** @type {any} */ entityName) => [
     AuthenticationController.requireLogin(),
     fetchEntityConfig(entityName),
     fetchEntity(),
@@ -61,7 +67,7 @@ const UserMembershipMiddleware = {
     ]),
   ],
 
-  requireGroupMemberManagement: entityName => [
+  requireGroupMemberManagement: (/** @type {any} */ entityName) => [
     AuthenticationController.requireLogin(),
     fetchEntityConfig(entityName),
     fetchEntity(),
@@ -204,17 +210,21 @@ const UserMembershipMiddleware = {
 
   requireSplitTestMetricsAccess: [
     AuthenticationController.requireLogin(),
-    useAdminCapabilities,
+    useNonAdminDomainCapabilities,
     allowAccessIfAny([
-      UserMembershipAuthorization.hasAdminCapability('view-split-test'),
+      UserMembershipAuthorization.hasNonAdminDomainCapability(
+        'view-split-test'
+      ),
     ]),
   ],
 
   requireSplitTestManagementAccess: [
     AuthenticationController.requireLogin(),
-    useAdminCapabilities,
+    useNonAdminDomainCapabilities,
     allowAccessIfAny([
-      UserMembershipAuthorization.hasAdminCapability('modify-split-test'),
+      UserMembershipAuthorization.hasNonAdminDomainCapability(
+        'modify-split-test'
+      ),
     ]),
   ],
 
@@ -223,10 +233,20 @@ const UserMembershipMiddleware = {
 
 export default UserMembershipMiddleware
 
-// fetch entity config and set it in the request
+/**
+ * fetch entity config and set it in the request
+ *
+ * @param {any} entityName
+ */
 function fetchEntityConfig(entityName) {
-  return (req, res, next) => {
-    const entityConfig = EntityConfigs[entityName]
+  return (
+    /** @type {any} */ req,
+    /** @type {any} */ res,
+    /** @type {any} */ next
+  ) => {
+    const entityConfig = /** @type {Record<string, any>} */ (EntityConfigs)[
+      entityName
+    ]
     req.entityName = entityName
     req.entityConfig = entityConfig
     next()
@@ -253,6 +273,7 @@ const ObjectIdEntitySchema = z.object({
     'groupAdmin',
     'groupManagers',
     'groupMember',
+    'groupUsers',
   ]),
   params: z.object({
     id: zz.coercedObjectId(),
@@ -270,6 +291,11 @@ const fetchEntitySchema = z.discriminatedUnion('entityName', [
 // `req.params.id`
 // - the entity name is in `req.query.resource_type` and is used to find the
 // require middleware depending on the entity name
+/**
+ * @param {any} req
+ * @param {any} res
+ * @param {any} next
+ */
 function requireGraphAccess(req, res, next) {
   const entityName = req.query.resource_type
   if (!entityName) {
@@ -278,8 +304,9 @@ function requireGraphAccess(req, res, next) {
   const middleWareName =
     entityName.charAt(0).toUpperCase() + entityName.slice(1)
 
-  const middlewares =
-    UserMembershipMiddleware[`require${middleWareName}MetricsAccess`]
+  const middlewares = /** @type {Record<string, any>} */ (
+    UserMembershipMiddleware
+  )[`require${middleWareName}MetricsAccess`]
   if (!middlewares) {
     return HttpErrorHandler.notFound(
       req,
@@ -291,25 +318,42 @@ function requireGraphAccess(req, res, next) {
   // call next router with fixed params to pass it to the correct middleware chain
   const { graph } = req.params
   const entityRoute = entityName === 'splitTest' ? 'split-test' : entityName
-  req.url = `/graphs/${entityRoute}/${graph}/${req.query.resource_id}`
+
+  // all other routes go through analytics, which map undefined graph type to index (to fetch all graphs)
+  // conversion still goes directly to v1, which can not handle an undefined graph param
+  if (!graph?.length && entityRoute === 'conversion') {
+    req.url = `/graphs/conversion/index/${req.query.resource_id}`
+  } else {
+    req.url = `/graphs/${entityRoute}/${graph}/${req.query.resource_id}`
+  }
   next('route')
 }
 
 // fetch the entity with id and config, and set it in the request
 function fetchEntity() {
-  return expressify(async (req, res, next) => {
-    const { params } = parseReq(req, fetchEntitySchema)
-    req.entity =
-      await UserMembershipHandler.promises.getEntityWithoutAuthorizationCheck(
-        params.id,
-        req.entityConfig
-      )
-    next()
-  })
+  return expressify(
+    async (
+      /** @type {any} */ req,
+      /** @type {any} */ res,
+      /** @type {any} */ next
+    ) => {
+      const { params } = parseReq(req, fetchEntitySchema)
+      req.entity =
+        await UserMembershipHandler.promises.getEntityWithoutAuthorizationCheck(
+          params.id,
+          req.entityConfig
+        )
+      next()
+    }
+  )
 }
 
 function fetchPublisherFromTemplate() {
-  return (req, res, next) => {
+  return (
+    /** @type {any} */ req,
+    /** @type {any} */ res,
+    /** @type {any} */ next
+  ) => {
     if (req.template.brand.slug) {
       // set the id as the publisher's id as it's the entity used for access
       // control
@@ -323,7 +367,11 @@ function fetchPublisherFromTemplate() {
 
 // ensure an entity was found, or fail with 404
 function requireEntity() {
-  return (req, res, next) => {
+  return (
+    /** @type {any} */ req,
+    /** @type {any} */ res,
+    /** @type {any} */ next
+  ) => {
     if (req.entity) {
       return next()
     }
@@ -334,10 +382,16 @@ function requireEntity() {
   }
 }
 
-// ensure an entity was found or redirect to entity creation page if the user
-// has permissions to create the entity, or fail with 404
+/**
+ * ensure an entity was found or redirect to entity creation page if the user
+ * has permissions to create the entity, or fail with 404
+ */
 function requireEntityOrCreate() {
-  return (req, res, next) => {
+  return (
+    /** @type {any} */ req,
+    /** @type {any} */ res,
+    /** @type {any} */ next
+  ) => {
     if (req.entity) {
       return next()
     }
@@ -355,21 +409,31 @@ function requireEntityOrCreate() {
 
 // fetch the template from v1, and set it in the request
 function fetchV1Template() {
-  return expressify(async (req, res, next) => {
-    const templateId = req.params.id
-    const body = await TemplatesManager.promises.fetchFromV1(templateId)
-    req.template = {
-      id: body.id,
-      title: body.title,
-      brand: body.brand,
+  return expressify(
+    async (
+      /** @type {any} */ req,
+      /** @type {any} */ res,
+      /** @type {any} */ next
+    ) => {
+      const templateId = req.params.id
+      const body = await TemplatesManager.promises.fetchFromV1(templateId)
+      req.template = {
+        id: body.id,
+        title: body.title,
+        brand: body.brand,
+      }
+      next()
     }
-    next()
-  })
+  )
 }
 
 // ensure a template was found, or fail with 404
 function requireV1Template() {
-  return (req, res, next) => {
+  return (
+    /** @type {any} */ req,
+    /** @type {any} */ res,
+    /** @type {any} */ next
+  ) => {
     if (req.template.id) {
       return next()
     }
@@ -378,10 +442,18 @@ function requireV1Template() {
   }
 }
 
-// run a serie of synchronous access functions and call `next` if any of the
-// retur values is truly. Redirect to restricted otherwise
+/**
+ * run a series of synchronous access functions and call `next` if any of the
+ * return values is truly. Redirect to restricted otherwise
+ *
+ * @param {any} accessFunctions
+ */
 function allowAccessIfAny(accessFunctions) {
-  return (req, res, next) => {
+  return (
+    /** @type {any} */ req,
+    /** @type {any} */ res,
+    /** @type {any} */ next
+  ) => {
     for (const accessFunction of accessFunctions) {
       if (accessFunction(req)) {
         return next()

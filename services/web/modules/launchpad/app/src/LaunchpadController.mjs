@@ -2,6 +2,7 @@ import OError from '@overleaf/o-error'
 import { expressify } from '@overleaf/promise-utils'
 import Settings from '@overleaf/settings'
 import Path from 'node:path'
+import crypto from 'node:crypto'
 import logger from '@overleaf/logger'
 import UserRegistrationHandler from '../../../../app/src/Features/User/UserRegistrationHandler.mjs'
 import EmailHandler from '../../../../app/src/Features/Email/EmailHandler.mjs'
@@ -124,12 +125,13 @@ function registerExternalAuthAdmin(authMethod) {
 
     const body = {
       email,
-      password: 'password_here',
+      password: crypto.randomBytes(32).toString('hex'),
       first_name: email,
       last_name: '',
+      analyticsId: crypto.randomUUID(),
     }
     logger.debug(
-      { body, authMethod },
+      { email, authMethod },
       'creating admin account for specified external-auth user'
     )
 
@@ -211,7 +213,7 @@ async function registerAdmin(req, res) {
       .json({ message: { type: 'error', text: invalidPassword.message } })
   }
 
-  const body = { email, password }
+  const body = { email, password, analyticsId: crypto.randomUUID() }
 
   const user = await UserRegistrationHandler.promises.registerNewUser(body)
 

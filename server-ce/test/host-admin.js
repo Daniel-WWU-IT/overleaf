@@ -5,8 +5,12 @@ import { execFile as execFileCb } from 'node:child_process'
 import bodyParser from 'body-parser'
 import express from 'express'
 import YAML from 'js-yaml'
-import { isZodErrorLike } from 'zod-validation-error'
-import { ParamsError, parseReq, z } from '@overleaf/validation-tools'
+import {
+  InvalidParamsError,
+  InvalidRequestError,
+  parseReq,
+  z,
+} from '@overleaf/validation-tools'
 import { expressify } from '@overleaf/promise-utils'
 
 const execFile = promisify(execFileCb)
@@ -28,11 +32,12 @@ const PATHS = {
 const IMAGES = {
   CE: process.env.IMAGE_TAG_CE.replace(/:.+/, ''),
   PRO: process.env.IMAGE_TAG_PRO.replace(/:.+/, ''),
+  GIT_BRIDGE: process.env.IMAGE_TAG_GIT_BRIDGE.replace(/:.+/, ''),
 }
 const LATEST = {
   CE: process.env.IMAGE_TAG_CE.replace(/.+:/, '') || 'latest',
   PRO: process.env.IMAGE_TAG_PRO.replace(/.+:/, '') || 'latest',
-  GIT_BRIDGE: 'latest', // TODO, build in CI?
+  GIT_BRIDGE: process.env.IMAGE_TAG_GIT_BRIDGE.replace(/.+:/, '') || 'latest',
 }
 
 function defaultDockerComposeOverride() {
@@ -238,7 +243,7 @@ function setVarsDockerCompose({
 
   cfg.services.sharelatex.image = `${pro ? IMAGES.PRO : IMAGES.CE}:${version === 'latest' ? (pro ? LATEST.PRO : LATEST.CE) : version}`
   cfg.services['git-bridge'].image =
-    `quay.io/sharelatex/git-bridge:${version === 'latest' ? LATEST.GIT_BRIDGE : version}`
+    `${IMAGES.GIT_BRIDGE}:${version === 'latest' ? LATEST.GIT_BRIDGE : version}`
 
   cfg.services.sharelatex.environment = vars
 
@@ -474,12 +479,13 @@ app.delete(
 )
 
 app.use((error, req, res, next) => {
-  if (error instanceof ParamsError) {
+  if (error instanceof InvalidParamsError) {
     res.status(404).json({ error })
-  } else if (isZodErrorLike(error)) {
-    res.status(400).json({ error })
+  } else if (error instanceof InvalidRequestError) {
+    res.status(400).json({ error: error.zodError })
+  } else {
+    next(error)
   }
-  next(error)
 })
 
 purgeDataDir()

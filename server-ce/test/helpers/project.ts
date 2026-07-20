@@ -206,7 +206,7 @@ export function openProjectViaInviteNotification(
 function shareProjectByEmail(
   projectName: string,
   email: string,
-  level: 'Viewer' | 'Editor',
+  level: 'Viewer' | 'Editor' | 'Reviewer',
   newEditor: boolean = false
 ) {
   openProjectByName(projectName, newEditor)
@@ -231,7 +231,7 @@ function shareProjectByEmail(
 export function shareProjectByEmailAndAcceptInviteViaDash(
   projectName: string,
   email: string,
-  level: 'Viewer' | 'Editor',
+  level: 'Viewer' | 'Editor' | 'Reviewer',
   newEditor: boolean = false
 ) {
   shareProjectByEmail(projectName, email, level, newEditor)
@@ -245,7 +245,8 @@ export function getSpamSafeProjectName() {
     // Move from hex/16 to base64/64 possible characters per char in string
     const name = Buffer.from(uuid().replaceAll('-', ''), 'hex')
       .toString('base64')
-      .replace('/', '_')
+      .replaceAll('/', 'x')
+      .replaceAll('+', 'y')
       .slice(0, 10)
     const nDigits = (name.match(/\d/g) || []).length
     if (nDigits < 6) return name

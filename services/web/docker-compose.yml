@@ -3,13 +3,21 @@ volumes:
 
 services:
   test_unit:
-    image: node:24.13.0
+    build:
+      context: ../..
+      dockerfile: services/web/Dockerfile
+      target: base
     volumes:
       - .:/overleaf/services/web
       - ../../node_modules:/overleaf/node_modules
       - ../../libraries:/overleaf/libraries
       - ../../bin/shared/wait_for_it:/overleaf/bin/shared/wait_for_it
       - ../../tools/migrations:/overleaf/tools/migrations
+      - ../../tsconfig.backend.json:/overleaf/tsconfig.backend.json
+      - ../../package.json:/overleaf/package.json
+      - ../../.yarnrc.yml:/overleaf/.yarnrc.yml
+      - ../../yarn.lock:/overleaf/yarn.lock
+      - ../../.yarn:/overleaf/.yarn
     working_dir: /overleaf/services/web
     env_file: docker-compose.common.env
     environment:
@@ -26,20 +34,27 @@ services:
       REDIS_HOST: redis_test
       MONOREPO:
     entrypoint: /overleaf/bin/shared/wait_for_it mongo:27017 --timeout=60 --
-    command: npm run --silent test:unit:app
+    command: yarn run --silent test:unit:app
     user: node
     depends_on:
       - mongo
       - redis_test
 
   test_acceptance:
-    image: node:24.13.0
+    build:
+      context: ../..
+      dockerfile: services/web/Dockerfile
+      target: base
     volumes:
       - .:/overleaf/services/web
       - ../../node_modules:/overleaf/node_modules
       - ../../libraries:/overleaf/libraries
       - ../../bin/shared/wait_for_it:/overleaf/bin/shared/wait_for_it
       - ../../tools/migrations:/overleaf/tools/migrations
+      - ../../package.json:/overleaf/package.json
+      - ../../.yarnrc.yml:/overleaf/.yarnrc.yml
+      - ../../yarn.lock:/overleaf/yarn.lock
+      - ../../.yarn:/overleaf/.yarn
     user: node
     working_dir: /overleaf/services/web
     env_file: docker-compose.common.env
@@ -56,6 +71,7 @@ services:
       MONGO_SOCKET_TIMEOUT: 300000
       REDIS_HOST: redis_test
       MONOREPO:
+      RETRIES:
       # OVERLEAF_ALLOW_ANONYMOUS_READ_AND_WRITE_SHARING: 'true'
 
     extra_hosts:
@@ -66,9 +82,9 @@ services:
       - saml
       - ldap
     entrypoint: /overleaf/bin/shared/wait_for_it mongo:27017 --timeout=60 --
-    command: npm run --silent test:acceptance:app
+    command: yarn run --silent test:acceptance:app
 
-  test_frontend:
+  test_frontend_jsdom:
     build:
       context: ../..
       dockerfile: services/web/Dockerfile
@@ -77,6 +93,10 @@ services:
       - .:/overleaf/services/web
       - ../../node_modules:/overleaf/node_modules
       - ../../libraries:/overleaf/libraries
+      - ../../package.json:/overleaf/package.json
+      - ../../.yarnrc.yml:/overleaf/.yarnrc.yml
+      - ../../yarn.lock:/overleaf/yarn.lock
+      - ../../.yarn:/overleaf/.yarn
     working_dir: /overleaf/services/web
     environment:
       CI:
@@ -84,15 +104,24 @@ services:
       MOCHA_GREP: ${MOCHA_GREP}
       NODE_OPTIONS: "--unhandled-rejections=strict"
       VERBOSE_LOGGING:
-    command: npm run --silent test:frontend
+    command: yarn run --silent test:frontend
     user: node
 
   test_frontend_ct:
-    image: cypress/included:13.13.2
+    build:
+      context: ../../dockerfiles/cypress
+      args:
+        - USER_UID
+        - USER_GID
     volumes:
-      - ../../:/overleaf
+      - .:/overleaf/services/web
+      - ../../node_modules:/overleaf/node_modules
+      - ../../libraries:/overleaf/libraries
+      - ../../package.json:/overleaf/package.json
+      - ../../.yarnrc.yml:/overleaf/.yarnrc.yml
+      - ../../yarn.lock:/overleaf/yarn.lock
+      - ../../.yarn:/overleaf/.yarn
     working_dir: /overleaf/services/web
-    user: "${DOCKER_USER:-1000:1000}"
     environment:
       VERBOSE_LOGGING:
       CI:
@@ -113,17 +142,21 @@ services:
       - .:/overleaf/services/web
       - ../../node_modules:/overleaf/node_modules
       - ../../libraries:/overleaf/libraries
+      - ../../package.json:/overleaf/package.json
+      - ../../.yarnrc.yml:/overleaf/.yarnrc.yml
+      - ../../yarn.lock:/overleaf/yarn.lock
+      - ../../.yarn:/overleaf/.yarn
     working_dir: /overleaf/services/web
     environment:
       CI:
       JUNIT_ROOT_SUITE_NAME:
       NODE_OPTIONS: "--unhandled-rejections=strict"
       VERBOSE_LOGGING:
-    command: npm run --silent test:writefull
+    command: yarn run --silent test:writefull
     user: node
 
   redis_test:
-    image: redis:7.4.3
+    image: redis:7.4.8
 
   mongo:
     image: mongo:8.0.11

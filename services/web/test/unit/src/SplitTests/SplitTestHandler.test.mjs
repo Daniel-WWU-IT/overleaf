@@ -139,6 +139,7 @@ describe('SplitTestHandler', function () {
     beforeEach(async function (ctx) {
       ctx.user = {
         _id: new ObjectId(),
+        analyticsId: 'analytics-id',
         splitTests: {
           'active-test': [
             {
@@ -256,9 +257,101 @@ describe('SplitTestHandler', function () {
     })
   })
 
+  describe('mongo user variants', function () {
+    beforeEach(function (ctx) {
+      ctx.mongoUser = {
+        _id: new ObjectId(),
+        analyticsId: 'analytics-id',
+        splitTests: {},
+      }
+      // a feature flag whose enabled variant covers 100% of users
+      ctx.cachedSplitTests.set('my-flag', {
+        name: 'my-flag',
+        versions: [
+          {
+            active: true,
+            analyticsEnabled: true,
+            phase: 'release',
+            versionNumber: 1,
+            variants: [
+              {
+                name: 'enabled',
+                rolloutPercent: 100,
+                rolloutStripes: [{ start: 0, end: 100 }],
+              },
+            ],
+          },
+        ],
+      })
+    })
+
+    describe('getActiveAssignmentsForMongoUser', function () {
+      it('returns the assignments without re-fetching the user', async function (ctx) {
+        const assignments =
+          await ctx.SplitTestHandler.promises.getActiveAssignmentsForMongoUser(
+            ctx.mongoUser
+          )
+        expect(assignments['active-test']).to.deep.equal({
+          variantName: 'variant-1',
+          phase: 'release',
+          versionNumber: 2,
+        })
+        expect(ctx.SplitTestUserGetter.promises.getUser).to.not.have.been.called
+      })
+
+      it('throws when _id is missing from the projection', async function (ctx) {
+        await expect(
+          ctx.SplitTestHandler.promises.getActiveAssignmentsForMongoUser({
+            analyticsId: 'analytics-id',
+          })
+        ).to.be.rejectedWith('bug: include db.users._id in projection')
+      })
+
+      it('throws when analyticsId is missing from the projection', async function (ctx) {
+        await expect(
+          ctx.SplitTestHandler.promises.getActiveAssignmentsForMongoUser({
+            _id: new ObjectId(),
+          })
+        ).to.be.rejectedWith('bug: include db.users.analyticsId in projection')
+      })
+    })
+
+    describe('getAssignmentForMongoUser', function () {
+      it('returns the assignment without re-fetching the user', async function (ctx) {
+        const assignment =
+          await ctx.SplitTestHandler.promises.getAssignmentForMongoUser(
+            ctx.mongoUser,
+            'my-flag'
+          )
+        expect(assignment.variant).to.equal('enabled')
+        expect(ctx.SplitTestUserGetter.promises.getUser).to.not.have.been.called
+      })
+    })
+
+    describe('featureFlagEnabledForMongoUser', function () {
+      it('returns true when the assigned variant is enabled', async function (ctx) {
+        const enabled =
+          await ctx.SplitTestHandler.promises.featureFlagEnabledForMongoUser(
+            ctx.mongoUser,
+            'my-flag'
+          )
+        expect(enabled).to.be.true
+      })
+
+      it('returns false when the assigned variant is not enabled', async function (ctx) {
+        const enabled =
+          await ctx.SplitTestHandler.promises.featureFlagEnabledForMongoUser(
+            ctx.mongoUser,
+            'active-test'
+          )
+        expect(enabled).to.be.false
+      })
+    })
+  })
+
   describe('with a user without assignments', function () {
     beforeEach(async function (ctx) {
-      ctx.user = { _id: new ObjectId() }
+      ctx.user = { _id: new ObjectId(), analyticsId: 'analytics-id' }
       ctx.SplitTestUserGetter.promises.getUser.resolves(ctx.user)
       ctx.assignments =
         await ctx.SplitTestHandler.promises.getActiveAssignmentsForUser(
@@ -421,6 +514,35 @@ describe('SplitTestHandler', function () {
     })
   })
 
+  describe('getAssignment query overrides', function () {
+    beforeEach(function (ctx) {
+      ctx.AnalyticsManager.getIdsFromSession.returns({
+        userId: 'abc123abc123',
+      })
+      // 'active-test' would compute to 'variant-1'; override it to 'default'
+      ctx.req.query = { 'active-test': 'default' }
+    })
+
+    it('applies a query-string override by default', async function (ctx) {
+      const { variant } = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'active-test'
+      )
+      expect(variant).to.equal('default')
+    })
+
+    it('ignores query-string overrides when ignoreOverrides is set', async function (ctx) {
+      const { variant } = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'active-test',
+        { ignoreOverrides: true }
+      )
+      expect(variant).to.equal('variant-1')
+    })
+  })
+
   describe('variant user limits', function () {
     beforeEach(function (ctx) {
       ctx.AnalyticsManager.getIdsFromSession.returns({
@@ -499,20 +621,570 @@ describe('SplitTestHandler', function () {
 
       expect(assignment.variant).to.equal('variant-1')
     })
+  })
 
-    it('should assign to default if userCount is undefined', async function (ctx) {
+  describe('labs phase assignment (split test)', function () {
+    beforeEach(function (ctx) {
+      ctx.AnalyticsManager.getIdsFromSession.returns({
+        userId: 'abc123abc123',
+      })
       ctx.cachedSplitTests.set(
-        'active-test',
-        makeSplitTest('active-test', { userLimit: 100, userCount: undefined })
+        'labs-experiment',
+        makeSplitTest('labs-experiment', { phase: 'labs' })
       )
+    })
+
+    it('should assign to variant when user is in labs program and has opted into the experiment', async function (ctx) {
+      ctx.SplitTestUserGetter.promises.getUser.resolves({
+        _id: new ObjectId('abc123abc123abc123abc123'),
+        splitTests: {},
+        labsProgram: true,
+        labsExperiments: ['labs-experiment'],
+      })
 
       const assignment = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-experiment'
+      )
+
+      expect(assignment.variant).to.equal('variant-1')
+    })
+
+    it('should assign to default when user is in labs program but has not opted into the experiment', async function (ctx) {
+      ctx.SplitTestUserGetter.promises.getUser.resolves({
+        _id: new ObjectId('abc123abc123abc123abc123'),
+        splitTests: {},
+        labsProgram: true,
+        labsExperiments: ['some-other-experiment'],
+      })
+
+      const assignment = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-experiment'
+      )
+
+      expect(assignment.variant).to.equal('default')
+    })
+
+    it('should assign to default when user is not in labs program', async function (ctx) {
+      ctx.SplitTestUserGetter.promises.getUser.resolves({
+        _id: new ObjectId('abc123abc123abc123abc123'),
+        splitTests: {},
+        labsProgram: false,
+        labsExperiments: [],
+      })
+
+      const assignment = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-experiment'
+      )
+
+      expect(assignment.variant).to.equal('default')
+    })
+
+    it('should assign to default when user has no labsExperiments field', async function (ctx) {
+      ctx.SplitTestUserGetter.promises.getUser.resolves({
+        _id: new ObjectId('abc123abc123abc123abc123'),
+        splitTests: {},
+        labsProgram: true,
+      })
+
+      const assignment = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-experiment'
+      )
+
+      expect(assignment.variant).to.equal('default')
+    })
+
+    it('should assign to variant when under user limit', async function (ctx) {
+      ctx.cachedSplitTests.set(
+        'labs-experiment',
+        makeSplitTest('labs-experiment', {
+          phase: 'labs',
+          userLimit: 10,
+          userCount: 5,
+        })
+      )
+      ctx.SplitTestUserGetter.promises.getUser.resolves({
+        _id: new ObjectId('abc123abc123abc123abc123'),
+        splitTests: {},
+        labsProgram: true,
+        labsExperiments: ['labs-experiment'],
+      })
+
+      const assignment = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-experiment'
+      )
+
+      expect(assignment.variant).to.equal('variant-1')
+    })
+
+    it('should assign enrolled user to variant even when user limit is reached', async function (ctx) {
+      ctx.cachedSplitTests.set(
+        'labs-experiment',
+        makeSplitTest('labs-experiment', {
+          phase: 'labs',
+          userLimit: 10,
+          userCount: 10,
+        })
+      )
+      ctx.SplitTestUserGetter.promises.getUser.resolves({
+        _id: new ObjectId('abc123abc123abc123abc123'),
+        splitTests: {},
+        labsProgram: true,
+        labsExperiments: ['labs-experiment'],
+      })
+
+      const assignment = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-experiment'
+      )
+
+      expect(assignment.variant).to.equal('variant-1')
+    })
+
+    it('should allow already-assigned user even when limit is reached', async function (ctx) {
+      ctx.cachedSplitTests.set(
+        'labs-experiment',
+        makeSplitTest('labs-experiment', {
+          phase: 'labs',
+          userLimit: 10,
+          userCount: 10,
+        })
+      )
+      ctx.SplitTestUserGetter.promises.getUser.resolves({
+        _id: new ObjectId('abc123abc123abc123abc123'),
+        splitTests: {
+          'labs-experiment': [
+            {
+              variantName: 'variant-1',
+              versionNumber: 1,
+              assignedAt: new Date(),
+              phase: 'labs',
+            },
+          ],
+        },
+        labsProgram: true,
+        labsExperiments: ['labs-experiment'],
+      })
+
+      const assignment = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-experiment'
+      )
+
+      expect(assignment.variant).to.equal('variant-1')
+    })
+  })
+
+  describe('_loadSplitTestInfoInLocals labsDetails population', function () {
+    beforeEach(function (ctx) {
+      ctx.AnalyticsManager.getIdsFromSession.returns({
+        userId: 'abc123abc123',
+      })
+    })
+
+    it('populates labsDetails for a labs-phase split test', async function (ctx) {
+      const createdAt = new Date('2024-06-15T12:00:00.000Z')
+      ctx.cachedSplitTests.set('labs-info-test', {
+        name: 'labs-info-test',
+        labsTitle: 'My Labs Feature',
+        labsDescription: 'A great feature',
+        labsIcon: 'star',
+        badgeInfo: { labs: { url: 'https://example.com/survey' } },
+        versions: [
+          {
+            active: true,
+            analyticsEnabled: true,
+            phase: 'labs',
+            versionNumber: 1,
+            createdAt,
+            variants: [
+              {
+                name: 'variant-1',
+                rolloutPercent: 100,
+                rolloutStripes: [{ start: 0, end: 100 }],
+              },
+            ],
+          },
+        ],
+      })
+
+      await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-info-test'
+      )
+
+      expect(ctx.LocalsHelper.setSplitTestInfo).to.have.been.calledWith(
+        ctx.res.locals,
+        'labs-info-test',
+        sinon.match({
+          phase: 'labs',
+          labsDetails: sinon.match({
+            isFull: false,
+            versionCreatedAt: createdAt.toISOString(),
+            title: 'My Labs Feature',
+            description: 'A great feature',
+            icon: 'star',
+            surveyLink: 'https://example.com/survey',
+          }),
+        })
+      )
+    })
+
+    it('handles missing labsTitle defensively', async function (ctx) {
+      const createdAt = new Date('2024-01-01T00:00:00.000Z')
+      ctx.cachedSplitTests.set('my-labs-experiment', {
+        name: 'my-labs-experiment',
+        versions: [
+          {
+            active: true,
+            analyticsEnabled: true,
+            phase: 'labs',
+            versionNumber: 1,
+            createdAt,
+            variants: [
+              {
+                name: 'variant-1',
+                rolloutPercent: 100,
+                rolloutStripes: [{ start: 0, end: 100 }],
+              },
+            ],
+          },
+        ],
+      })
+
+      await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'my-labs-experiment'
+      )
+
+      expect(ctx.LocalsHelper.setSplitTestInfo).to.have.been.calledWith(
+        ctx.res.locals,
+        'my-labs-experiment',
+        sinon.match({
+          labsDetails: sinon.match({ title: '' }),
+        })
+      )
+    })
+
+    it('sets description to empty string when labsDescription is absent', async function (ctx) {
+      ctx.cachedSplitTests.set('labs-nodesc', {
+        name: 'labs-nodesc',
+        labsTitle: 'No Description',
+        versions: [
+          {
+            active: true,
+            analyticsEnabled: true,
+            phase: 'labs',
+            versionNumber: 1,
+            createdAt: new Date(),
+            variants: [
+              {
+                name: 'variant-1',
+                rolloutPercent: 100,
+                rolloutStripes: [{ start: 0, end: 100 }],
+              },
+            ],
+          },
+        ],
+      })
+
+      await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-nodesc'
+      )
+
+      expect(ctx.LocalsHelper.setSplitTestInfo).to.have.been.calledWith(
+        ctx.res.locals,
+        'labs-nodesc',
+        sinon.match({ labsDetails: sinon.match({ description: '' }) })
+      )
+    })
+
+    it('marks isFull true when userCount >= userLimit', async function (ctx) {
+      ctx.cachedSplitTests.set('labs-full', {
+        name: 'labs-full',
+        versions: [
+          {
+            active: true,
+            analyticsEnabled: true,
+            phase: 'labs',
+            versionNumber: 1,
+            createdAt: new Date(),
+            variants: [
+              {
+                name: 'variant-1',
+                rolloutPercent: 100,
+                rolloutStripes: [{ start: 0, end: 100 }],
+                userLimit: 10,
+                userCount: 10,
+              },
+            ],
+          },
+        ],
+      })
+
+      await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-full'
+      )
+
+      expect(ctx.LocalsHelper.setSplitTestInfo).to.have.been.calledWith(
+        ctx.res.locals,
+        'labs-full',
+        sinon.match({ labsDetails: sinon.match({ isFull: true }) })
+      )
+    })
+
+    it('marks isFull false when userCount < userLimit', async function (ctx) {
+      ctx.cachedSplitTests.set('labs-not-full', {
+        name: 'labs-not-full',
+        versions: [
+          {
+            active: true,
+            analyticsEnabled: true,
+            phase: 'labs',
+            versionNumber: 1,
+            createdAt: new Date(),
+            variants: [
+              {
+                name: 'variant-1',
+                rolloutPercent: 100,
+                rolloutStripes: [{ start: 0, end: 100 }],
+                userLimit: 10,
+                userCount: 5,
+              },
+            ],
+          },
+        ],
+      })
+
+      await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-not-full'
+      )
+
+      expect(ctx.LocalsHelper.setSplitTestInfo).to.have.been.calledWith(
+        ctx.res.locals,
+        'labs-not-full',
+        sinon.match({ labsDetails: sinon.match({ isFull: false }) })
+      )
+    })
+
+    it('marks isFull false when no userLimit is set', async function (ctx) {
+      ctx.cachedSplitTests.set('labs-no-limit', {
+        name: 'labs-no-limit',
+        versions: [
+          {
+            active: true,
+            analyticsEnabled: true,
+            phase: 'labs',
+            versionNumber: 1,
+            createdAt: new Date(),
+            variants: [
+              {
+                name: 'variant-1',
+                rolloutPercent: 100,
+                rolloutStripes: [{ start: 0, end: 100 }],
+              },
+            ],
+          },
+        ],
+      })
+
+      await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-no-limit'
+      )
+
+      expect(ctx.LocalsHelper.setSplitTestInfo).to.have.been.calledWith(
+        ctx.res.locals,
+        'labs-no-limit',
+        sinon.match({ labsDetails: sinon.match({ isFull: false }) })
+      )
+    })
+
+    it('does not set labsDetails for a release-phase split test', async function (ctx) {
+      await ctx.SplitTestHandler.promises.getAssignment(
         ctx.req,
         ctx.res,
         'active-test'
       )
 
+      expect(ctx.LocalsHelper.setSplitTestInfo).to.have.been.calledWith(
+        ctx.res.locals,
+        'active-test',
+        sinon.match(info => info.labsDetails === undefined)
+      )
+    })
+  })
+
+  describe('labs phase assignment (gradual rollout)', function () {
+    beforeEach(function (ctx) {
+      ctx.AnalyticsManager.getIdsFromSession.returns({
+        userId: 'abc123abc123',
+      })
+      ctx.cachedSplitTests.set(
+        'labs-experiment-gr',
+        makeSplitTest('labs-experiment-gr', {
+          phase: 'labs',
+          analyticsEnabled: false,
+        })
+      )
+    })
+
+    it('should assign to variant when user is in labs program and has opted in', async function (ctx) {
+      ctx.SplitTestUserGetter.promises.getUser.resolves({
+        _id: new ObjectId('abc123abc123abc123abc123'),
+        splitTests: {},
+        labsProgram: true,
+        labsExperiments: ['labs-experiment-gr'],
+      })
+
+      const assignment = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-experiment-gr'
+      )
+
+      expect(assignment.variant).to.equal('variant-1')
+    })
+
+    it('should assign to default when user has not opted in', async function (ctx) {
+      ctx.SplitTestUserGetter.promises.getUser.resolves({
+        _id: new ObjectId('abc123abc123abc123abc123'),
+        splitTests: {},
+        labsProgram: true,
+        labsExperiments: [],
+      })
+
+      const assignment = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-experiment-gr'
+      )
+
       expect(assignment.variant).to.equal('default')
+    })
+
+    it('should assign to default when user is not in labs program', async function (ctx) {
+      ctx.SplitTestUserGetter.promises.getUser.resolves({
+        _id: new ObjectId('abc123abc123abc123abc123'),
+        splitTests: {},
+        labsProgram: false,
+        labsExperiments: [],
+      })
+
+      const assignment = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-experiment-gr'
+      )
+
+      expect(assignment.variant).to.equal('default')
+    })
+
+    it('should assign to variant when under user limit', async function (ctx) {
+      ctx.cachedSplitTests.set(
+        'labs-experiment-gr',
+        makeSplitTest('labs-experiment-gr', {
+          phase: 'labs',
+          analyticsEnabled: false,
+          userLimit: 10,
+          userCount: 5,
+        })
+      )
+      ctx.SplitTestUserGetter.promises.getUser.resolves({
+        _id: new ObjectId('abc123abc123abc123abc123'),
+        splitTests: {},
+        labsProgram: true,
+        labsExperiments: ['labs-experiment-gr'],
+      })
+
+      const assignment = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-experiment-gr'
+      )
+
+      expect(assignment.variant).to.equal('variant-1')
+    })
+
+    it('should assign enrolled user to variant even when user limit is reached', async function (ctx) {
+      ctx.cachedSplitTests.set(
+        'labs-experiment-gr',
+        makeSplitTest('labs-experiment-gr', {
+          phase: 'labs',
+          analyticsEnabled: false,
+          userLimit: 10,
+          userCount: 10,
+        })
+      )
+      ctx.SplitTestUserGetter.promises.getUser.resolves({
+        _id: new ObjectId('abc123abc123abc123abc123'),
+        splitTests: {},
+        labsProgram: true,
+        labsExperiments: ['labs-experiment-gr'],
+      })
+
+      const assignment = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-experiment-gr'
+      )
+
+      expect(assignment.variant).to.equal('variant-1')
+    })
+
+    it('should allow already-assigned user even when limit is reached', async function (ctx) {
+      ctx.cachedSplitTests.set(
+        'labs-experiment-gr',
+        makeSplitTest('labs-experiment-gr', {
+          phase: 'labs',
+          analyticsEnabled: false,
+          userLimit: 10,
+          userCount: 10,
+        })
+      )
+      ctx.SplitTestUserGetter.promises.getUser.resolves({
+        _id: new ObjectId('abc123abc123abc123abc123'),
+        splitTests: {
+          'labs-experiment-gr': [
+            {
+              variantName: 'variant-1',
+              versionNumber: 1,
+              assignedAt: new Date(),
+              phase: 'labs',
+            },
+          ],
+        },
+        labsProgram: true,
+        labsExperiments: ['labs-experiment-gr'],
+      })
+
+      const assignment = await ctx.SplitTestHandler.promises.getAssignment(
+        ctx.req,
+        ctx.res,
+        'labs-experiment-gr'
+      )
+
+      expect(assignment.variant).to.equal('variant-1')
     })
   })
 })

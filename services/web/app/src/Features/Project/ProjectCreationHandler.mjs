@@ -17,6 +17,7 @@ import _ from 'lodash'
 import AnalyticsManager from '../Analytics/AnalyticsManager.mjs'
 import TpdsUpdateSender from '../ThirdPartyDataStore/TpdsUpdateSender.mjs'
 import SplitTestHandler from '../SplitTests/SplitTestHandler.mjs'
+import SplitTestUserGetter from '../SplitTests/SplitTestUserGetter.mjs'
 import ClsiCacheManager from '../Compile/ClsiCacheManager.mjs'
 import crypto from 'node:crypto'
 
@@ -163,8 +164,8 @@ async function populateClsiCacheForExampleProject(
   return projectId
 }
 
-async function createExampleProject(ownerId, projectName) {
-  const project = await _createBlankProject(ownerId, projectName)
+async function createExampleProject(ownerId, projectName, attributes = {}) {
+  const project = await _createBlankProject(ownerId, projectName, attributes)
 
   const { fileEntries, docEntries } = await _addExampleProjectFiles(
     ownerId,
@@ -271,11 +272,12 @@ async function _createBlankProject(
   const user = await User.findById(ownerId, {
     'ace.spellCheckLanguage': 1,
     _id: 1,
+    ...SplitTestUserGetter.getProjection('history-ranges-support'),
   })
   project.spellCheckLanguage = user.ace.spellCheckLanguage
   const historyRangesSupportAssignment =
-    await SplitTestHandler.promises.getAssignmentForUser(
-      user._id,
+    await SplitTestHandler.promises.getAssignmentForMongoUser(
+      user,
       'history-ranges-support'
     )
   if (historyRangesSupportAssignment.variant === 'enabled') {
@@ -310,6 +312,9 @@ async function _createRootDoc(project, ownerId, docLines) {
       null
     )
     await ProjectEntityUpdateHandler.promises.setRootDoc(project._id, doc._id)
+    // update the rootDoc id on the project in memory
+    // used to identify the rootResourcePath when doing an initial compile from history
+    project.rootDoc_id = doc._id
     return doc
   } catch (error) {
     throw OError.tag(error, 'error adding root doc when creating project')

@@ -1,5 +1,6 @@
 import { vi, expect } from 'vitest'
 import sinon from 'sinon'
+import OError from '@overleaf/o-error'
 import Errors from '../../../../app/src/Features/Errors/Errors.js'
 
 const modulePath = '../../../../app/src/Features/Project/ProjectLocator'
@@ -412,18 +413,36 @@ describe('ProjectLocator', function () {
 
     it('should return an error if the file can not be found inside know folder', async function (ctx) {
       const path = `${subFolder.name}/${secondSubFolder.name}/exist.txt`
-      await expect(ctx.locator.promises.findElementByPath({ project, path })).to
-        .eventually.be.rejected
+      let error
+      try {
+        await ctx.locator.promises.findElementByPath({ project, path })
+      } catch (err) {
+        error = err
+      }
+      expect(error).to.be.instanceOf(Errors.NotFoundError)
+      expect(error.message).to.equal('element not found in project')
+      expect(OError.getFullInfo(error)).to.eql({
+        projectId: project._id,
+        needlePath: path,
+        entityName: 'exist.txt',
+      })
     })
 
     it('should return an error if the file can not be found inside unknown folder', async function (ctx) {
       const path = 'this/does/not/exist.txt'
-      await expect(
-        ctx.locator.promises.findElementByPath({
-          project,
-          path,
-        })
-      ).to.eventually.be.rejected
+      let error
+      try {
+        await ctx.locator.promises.findElementByPath({ project, path })
+      } catch (err) {
+        error = err
+      }
+      expect(error).to.be.instanceOf(Errors.NotFoundError)
+      expect(error.message).to.equal('parent folder not found in project')
+      expect(OError.getFullInfo(error)).to.eql({
+        projectId: project._id,
+        needlePath: path,
+        needleFolderName: 'this',
+      })
     })
 
     describe('where duplicate folder exists', function () {

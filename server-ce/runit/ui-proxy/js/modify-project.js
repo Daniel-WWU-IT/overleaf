@@ -60,10 +60,19 @@ function addHeaderItems() {
 }
 
 function adjustNavigationItems() {
-  // Hide account controls
-  const accGroup = $("div[class='ds-nav-sidebar-lower']");
-  if (accGroup.length > 0) {
-    accGroup.hide();
+  // Hide some account controls
+  const accName = $("div[class='ds-nav-ds-name']");
+  if (accName.length > 0) {
+    accName.hide();
+  }
+  const accSettings = $("li:has(a[href='/user/settings'])");
+  if (accSettings.length > 0) {
+    accSettings.hide();
+  }
+  const accLogout = $("li:has(form[id='logOutForm'])");
+  if (accLogout.length > 0) {
+    accLogout.prev()?.attr("style", "display: none !important");
+    accLogout.hide();
   }
 
   // Hide the main account button

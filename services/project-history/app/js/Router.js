@@ -1,4 +1,3 @@
-import OError from '@overleaf/o-error'
 import * as HttpController from './HttpController.js'
 
 export function initialize(app) {
@@ -25,6 +24,12 @@ export function initialize(app) {
   app.get('/project/:project_id/version', HttpController.latestVersion)
 
   app.post('/project/:project_id/flush', HttpController.flushProject)
+
+  app.get(
+    '/project/:project_id/resync-pending',
+    HttpController.getResyncPending
+  )
+  app.get('/project/:project_id/debug-info', HttpController.getDebugInfo)
 
   app.post('/project/:project_id/resync', HttpController.resyncProject)
 
@@ -78,7 +83,11 @@ export function initialize(app) {
 
   app.get('/project/:history_id/blob/:hash', HttpController.getProjectBlob)
 
+  app.post('/project/:project_id/clone', HttpController.cloneProject)
+
   app.get('/status/failures', HttpController.getFailures)
+
+  app.get('/status/failures-full', HttpController.getFailuresFull)
 
   app.get('/status/queue', HttpController.getQueueCounts)
 
@@ -87,10 +96,6 @@ export function initialize(app) {
   app.post('/flush/old', HttpController.flushOld)
 
   app.get('/status', (req, res, next) => res.send('project-history is up'))
-
-  app.get('/oops', function (req, res, next) {
-    throw new OError('dummy test error')
-  })
 
   app.get('/check_lock', HttpController.checkLock)
 

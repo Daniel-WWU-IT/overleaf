@@ -83,16 +83,22 @@ describe('SandboxedCompiles', function () {
       cy.findByText('\\maketitle').parent().click()
       cy.findByText('\\maketitle')
         .parent()
-        .type('\n\\def\\x{{}Hello!\\par\\x}\\x')
+        .type(
+          '\nFirst page\\clearpage' +
+            '\nSecond page' +
+            '\\def\\loop{{}\\let\\next\\loop\\next}\\loop'
+        )
       waitForCompileRateLimitCoolOff()
       cy.log('Start compile')
       // We need to start the compile manually because we do not want to wait for it to finish
       cy.findByRole('button', { name: 'Recompile' }).click()
+      // Wait for the compile to start
+      cy.findByRole('button', { name: 'Compiling…' }).should('exist')
       // Now stop the compile and kill the latex process
       stopCompile({ delay: 1000 })
       cy.findByRole('region', { name: 'PDF preview' })
         .invoke('text')
-        .should('match', /PDF Rendering Error|Compilation cancelled/)
+        .should('match', /Compilation cancelled/)
       // Check that the previous compile is not running in the background by
       // disabling the infinite loop and recompiling
       cy.findByText('\\def').parent().click()
@@ -294,11 +300,11 @@ describe('SandboxedCompiles', function () {
       cy.log('wait for compile')
       cy.findByRole('region', { name: 'PDF preview' }).findByText('sandboxed')
 
-      cy.log('Check which compiler version was used, expect 2025')
+      cy.log('Check which compiler version was used, expect 2026')
       cy.findByRole('button', { name: 'View logs' }).click()
       cy.findByLabelText('Raw logs from the LaTeX compiler').within(() => {
         cy.findByRole('button', { name: 'Expand' }).click()
-        cy.findByText(/This is pdfTeX, Version .+ \(TeX Live 2025\) /)
+        cy.findByText(/This is pdfTeX, Version .+ \(TeX Live 2026\) /)
       })
 
       cy.log('Check that there is no TeX Live version toggle')
@@ -327,7 +333,7 @@ describe('SandboxedCompiles', function () {
   })
 
   // https://github.com/overleaf/internal/issues/20216
-  // eslint-disable-next-line mocha/no-skipped-tests
+  // eslint-disable-next-line mocha/no-pending-tests
   describe.skip('unavailable in CE', function () {
     if (isExcludedBySharding('CE_CUSTOM_1')) return
     startWith({ pro: false, vars: enabledVars, resetData: true })

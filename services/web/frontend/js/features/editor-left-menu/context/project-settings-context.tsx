@@ -19,6 +19,7 @@ type ProjectSettingsSetterContextValue = {
   setSyntaxValidation: (
     syntaxValidation: UserSettings['syntaxValidation']
   ) => void
+  setPreviewTabs: (previewTabs: UserSettings['previewTabs']) => void
   setMode: (mode: UserSettings['mode']) => void
   setEditorTheme: (editorTheme: UserSettings['editorTheme']) => void
   setEditorLightTheme: (
@@ -32,7 +33,15 @@ type ProjectSettingsSetterContextValue = {
   setPdfViewer: (pdfViewer: UserSettings['pdfViewer']) => void
   setMathPreview: (mathPreview: UserSettings['mathPreview']) => void
   setBreadcrumbs: (breadcrumbs: UserSettings['breadcrumbs']) => void
+  setEditorTabs: (editorTabs: UserSettings['editorTabs']) => void
+  setNonBlinkingCursor: (
+    nonBlinkingCursor: UserSettings['nonBlinkingCursor']
+  ) => void
   setDarkModePdf: (darkModePdf: UserSettings['darkModePdf']) => void
+  setFloatingMenu: (floatingMenu: UserSettings['floatingMenu']) => void
+  setZotero: (zotero: UserSettings['zotero']) => void
+  setMendeley: (mendeley: UserSettings['mendeley']) => void
+  setPapers: (papers: UserSettings['papers']) => void
 }
 
 type ProjectSettingsContextValue = Partial<ProjectSettings> &
@@ -64,6 +73,8 @@ export const ProjectSettingsProvider: FC<React.PropsWithChildren> = ({
     setAutoPairDelimiters,
     syntaxValidation,
     setSyntaxValidation,
+    previewTabs,
+    setPreviewTabs,
     editorTheme,
     setEditorTheme,
     editorLightTheme,
@@ -86,8 +97,20 @@ export const ProjectSettingsProvider: FC<React.PropsWithChildren> = ({
     setMathPreview,
     breadcrumbs,
     setBreadcrumbs,
+    editorTabs,
+    setEditorTabs,
+    nonBlinkingCursor,
+    setNonBlinkingCursor,
     darkModePdf,
     setDarkModePdf,
+    floatingMenu,
+    setFloatingMenu,
+    zotero,
+    setZotero,
+    mendeley,
+    setMendeley,
+    papers,
+    setPapers,
   } = useUserWideSettings()
 
   useProjectWideSettingsSocketListener()
@@ -108,6 +131,8 @@ export const ProjectSettingsProvider: FC<React.PropsWithChildren> = ({
       setAutoPairDelimiters,
       syntaxValidation,
       setSyntaxValidation,
+      previewTabs,
+      setPreviewTabs,
       editorTheme,
       setEditorTheme,
       editorLightTheme,
@@ -130,8 +155,20 @@ export const ProjectSettingsProvider: FC<React.PropsWithChildren> = ({
       setMathPreview,
       breadcrumbs,
       setBreadcrumbs,
+      editorTabs,
+      setEditorTabs,
+      nonBlinkingCursor,
+      setNonBlinkingCursor,
       darkModePdf,
       setDarkModePdf,
+      floatingMenu,
+      setFloatingMenu,
+      zotero,
+      setZotero,
+      mendeley,
+      setMendeley,
+      papers,
+      setPapers,
     }),
     [
       compiler,
@@ -148,6 +185,8 @@ export const ProjectSettingsProvider: FC<React.PropsWithChildren> = ({
       setAutoPairDelimiters,
       syntaxValidation,
       setSyntaxValidation,
+      previewTabs,
+      setPreviewTabs,
       editorTheme,
       setEditorTheme,
       editorLightTheme,
@@ -170,8 +209,20 @@ export const ProjectSettingsProvider: FC<React.PropsWithChildren> = ({
       setMathPreview,
       breadcrumbs,
       setBreadcrumbs,
+      editorTabs,
+      setEditorTabs,
+      nonBlinkingCursor,
+      setNonBlinkingCursor,
       darkModePdf,
       setDarkModePdf,
+      floatingMenu,
+      setFloatingMenu,
+      zotero,
+      setZotero,
+      mendeley,
+      setMendeley,
+      papers,
+      setPapers,
     ]
   )
 

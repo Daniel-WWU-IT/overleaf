@@ -15,6 +15,10 @@ services:
       - .:/overleaf/services/history-v1
       - ../../node_modules:/overleaf/node_modules
       - ../../libraries:/overleaf/libraries
+      - ../../package.json:/overleaf/package.json
+      - ../../.yarnrc.yml:/overleaf/.yarnrc.yml
+      - ../../yarn.lock:/overleaf/yarn.lock
+      - ../../.yarn:/overleaf/.yarn
       - ../../bin/shared/wait_for_it:/overleaf/bin/shared/wait_for_it
       - ../../tools/migrations:/overleaf/tools/migrations
     working_dir: /overleaf/services/history-v1
@@ -30,7 +34,7 @@ services:
       ANALYTICS_QUEUES_REDIS_HOST: redis_test
       ANALYTICS_QUEUES_BQ_SINK_REDIS_HOST: redis_test
     entrypoint: /overleaf/bin/shared/wait_for_it mongo:27017 --timeout=60 --
-    command: npm run --silent test:unit
+    command: yarn run --silent test:unit
     user: node
     depends_on:
       mongo:
@@ -47,11 +51,16 @@ services:
       - .:/overleaf/services/history-v1
       - ../../node_modules:/overleaf/node_modules
       - ../../libraries:/overleaf/libraries
+      - ../../package.json:/overleaf/package.json
+      - ../../.yarnrc.yml:/overleaf/.yarnrc.yml
+      - ../../yarn.lock:/overleaf/yarn.lock
+      - ../../.yarn:/overleaf/.yarn
       - minio-certs:/certs
       - ../../bin/shared/wait_for_it:/overleaf/bin/shared/wait_for_it
       - ../../tools/migrations:/overleaf/tools/migrations
     working_dir: /overleaf/services/history-v1
     environment:
+      RETRIES:
       REDIS_HOST: redis_test
       HISTORY_REDIS_HOST: redis_test
       QUEUES_REDIS_HOST: redis_test
@@ -90,10 +99,10 @@ services:
       gcs:
         condition: service_healthy
     entrypoint: /overleaf/bin/shared/wait_for_it mongo:27017 --timeout=60 --
-    command: npm run --silent test:acceptance
+    command: yarn run --silent test:acceptance
 
   redis_test:
-    image: redis:7.4.3
+    image: redis:7.4.8
     healthcheck:
       test: ping=$$(redis-cli ping) && [ "$$ping" = 'PONG' ]
       interval: 1s
@@ -115,7 +124,7 @@ services:
       - mongo:127.0.0.1
 
   postgres:
-    image: postgres:10
+    image: postgres:14
     environment:
       POSTGRES_USER: overleaf
       POSTGRES_PASSWORD: overleaf
@@ -130,7 +139,7 @@ services:
   certs:
     build:
       dockerfile_inline: |
-        FROM node:24.13.0
+        FROM node:24.14.1
         RUN wget -O /certgen "https://github.com/minio/certgen/releases/download/v1.3.0/certgen-linux-"`dpkg --print-architecture`
         RUN chmod +x /certgen
     volumes:

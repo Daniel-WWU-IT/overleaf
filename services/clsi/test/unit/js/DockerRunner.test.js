@@ -57,6 +57,14 @@ describe('DockerRunner', () => {
       },
     }))
 
+    ctx.LastProjectAccess = {
+      getLastProjectAccessTime: sinon
+        .stub()
+        .returns(Date.now() - 24 * 60 * 60 * 1000),
+    }
+
+    vi.doMock('../../../app/js/LastProjectAccess', () => ctx.LastProjectAccess)
+
     vi.doMock('../../../app/js/LockManager', () => ({
       default: {
         runWithLock(key, runner, callback) {
@@ -115,7 +123,7 @@ describe('DockerRunner', () => {
         await new Promise((resolve, reject) => {
           ctx.DockerRunner._runAndWaitForContainer = sinon
             .stub()
-            .callsArgWith(3, null, (ctx.output = 'mock-output'))
+            .callsArgWith(3, null, (ctx.output = { stdout: 'mock-output' }))
           return ctx.DockerRunner.run(
             ctx.project_id,
             ctx.command,
@@ -124,6 +132,7 @@ describe('DockerRunner', () => {
             ctx.timeout,
             ctx.env,
             ctx.compileGroup,
+            null,
             (err, output) => {
               ctx.callback(err, output)
               return resolve()
@@ -160,7 +169,7 @@ describe('DockerRunner', () => {
         ctx.directory = '/var/lib/overleaf/data/compiles/xyz'
         ctx.DockerRunner._runAndWaitForContainer = sinon
           .stub()
-          .callsArgWith(3, null, (ctx.output = 'mock-output'))
+          .callsArgWith(3, null, (ctx.output = { stdout: 'mock-output' }))
         return ctx.DockerRunner.run(
           ctx.project_id,
           ctx.command,
@@ -169,6 +178,7 @@ describe('DockerRunner', () => {
           ctx.timeout,
           ctx.env,
           ctx.compileGroup,
+          null,
           ctx.callback
         )
       })
@@ -191,7 +201,7 @@ describe('DockerRunner', () => {
         ctx.directory = '/var/lib/overleaf/data/output/xyz/generated-files/id'
         ctx.DockerRunner._runAndWaitForContainer = sinon
           .stub()
-          .callsArgWith(3, null, (ctx.output = 'mock-output'))
+          .callsArgWith(3, null, (ctx.output = { stdout: 'mock-output' }))
         ctx.DockerRunner.run(
           ctx.project_id,
           ctx.command,
@@ -200,6 +210,7 @@ describe('DockerRunner', () => {
           ctx.timeout,
           ctx.env,
           'synctex-output',
+          null,
           ctx.callback
         )
       })
@@ -222,7 +233,7 @@ describe('DockerRunner', () => {
         ctx.directory = '/var/lib/overleaf/data/compile/xyz'
         ctx.DockerRunner._runAndWaitForContainer = sinon
           .stub()
-          .callsArgWith(3, null, (ctx.output = 'mock-output'))
+          .callsArgWith(3, null, (ctx.output = { stdout: 'mock-output' }))
         ctx.DockerRunner.run(
           ctx.project_id,
           ctx.command,
@@ -231,6 +242,7 @@ describe('DockerRunner', () => {
           ctx.timeout,
           ctx.env,
           'synctex',
+          null,
           ctx.callback
         )
       })
@@ -253,7 +265,7 @@ describe('DockerRunner', () => {
         ctx.directory = '/var/lib/overleaf/data/compile/xyz'
         ctx.DockerRunner._runAndWaitForContainer = sinon
           .stub()
-          .callsArgWith(3, null, (ctx.output = 'mock-output'))
+          .callsArgWith(3, null, (ctx.output = { stdout: 'mock-output' }))
         ctx.DockerRunner.run(
           ctx.project_id,
           ctx.command,
@@ -262,6 +274,7 @@ describe('DockerRunner', () => {
           ctx.timeout,
           ctx.env,
           'wordcount',
+          null,
           ctx.callback
         )
       })
@@ -279,10 +292,43 @@ describe('DockerRunner', () => {
       })
     })
 
+    describe('with a cwd', () => {
+      beforeEach(ctx => {
+        ctx.DockerRunner._runAndWaitForContainer = sinon
+          .stub()
+          .callsArgWith(3, null, (ctx.output = { stdout: 'mock-output' }))
+        ctx.DockerRunner.run(
+          ctx.project_id,
+          ctx.command,
+          ctx.directory,
+          ctx.image,
+          ctx.timeout,
+          ctx.env,
+          ctx.compileGroup,
+          'subdir',
+          ctx.callback
+        )
+      })
+
+      it('should pass the cwd through to _getContainerOptions', ctx => {
+        ctx.DockerRunner._getContainerOptions
+          .calledWith(
+            ctx.command_with_dir,
+            ctx.image,
+            ctx.volumes,
+            ctx.timeout,
+            ctx.env,
+            ctx.compileGroup,
+            'subdir'
+          )
+          .should.equal(true)
+      })
+    })
+
     describe('when the run throws an error', () => {
       beforeEach(ctx => {
         let firstTime = true
-        ctx.output = 'mock-output'
+        ctx.output = { stdout: 'mock-output' }
         ctx.DockerRunner._runAndWaitForContainer = (
           options,
           volumes,
@@ -311,6 +357,7 @@ describe('DockerRunner', () => {
           ctx.timeout,
           ctx.env,
           ctx.compileGroup,
+          null,
           ctx.callback
         )
       })
@@ -334,7 +381,7 @@ describe('DockerRunner', () => {
       beforeEach(ctx => {
         ctx.DockerRunner._runAndWaitForContainer = sinon
           .stub()
-          .callsArgWith(3, null, (ctx.output = 'mock-output'))
+          .callsArgWith(3, null, (ctx.output = { stdout: 'mock-output' }))
         ctx.DockerRunner.run(
           ctx.project_id,
           ctx.command,
@@ -343,6 +390,7 @@ describe('DockerRunner', () => {
           ctx.timeout,
           ctx.env,
           ctx.compileGroup,
+          null,
           ctx.callback
         )
       })
@@ -364,7 +412,7 @@ describe('DockerRunner', () => {
         ctx.Settings.texliveImageNameOveride = 'overrideimage.com/something'
         ctx.DockerRunner._runAndWaitForContainer = sinon
           .stub()
-          .callsArgWith(3, null, (ctx.output = 'mock-output'))
+          .callsArgWith(3, null, (ctx.output = { stdout: 'mock-output' }))
         ctx.DockerRunner.run(
           ctx.project_id,
           ctx.command,
@@ -373,6 +421,7 @@ describe('DockerRunner', () => {
           ctx.timeout,
           ctx.env,
           ctx.compileGroup,
+          null,
           ctx.callback
         )
       })
@@ -391,7 +440,7 @@ describe('DockerRunner', () => {
         ]
         ctx.DockerRunner._runAndWaitForContainer = sinon
           .stub()
-          .callsArgWith(3, null, (ctx.output = 'mock-output'))
+          .callsArgWith(3, null, (ctx.output = { stdout: 'mock-output' }))
       })
 
       describe('with a valid image', () => {
@@ -404,6 +453,7 @@ describe('DockerRunner', () => {
             ctx.timeout,
             ctx.env,
             ctx.compileGroup,
+            null,
             ctx.callback
           )
         })
@@ -423,6 +473,7 @@ describe('DockerRunner', () => {
             ctx.timeout,
             ctx.env,
             ctx.compileGroup,
+            null,
             ctx.callback
           )
         })
@@ -469,7 +520,7 @@ describe('DockerRunner', () => {
         }
         ctx.DockerRunner._runAndWaitForContainer = sinon
           .stub()
-          .callsArgWith(3, null, (ctx.output = 'mock-output'))
+          .callsArgWith(3, null, (ctx.output = { stdout: 'mock-output' }))
         ctx.DockerRunner.run(
           ctx.project_id,
           ctx.command,
@@ -478,6 +529,7 @@ describe('DockerRunner', () => {
           ctx.timeout,
           ctx.env,
           ctx.compileGroup,
+          null,
           ctx.callback
         )
       })
@@ -498,6 +550,48 @@ describe('DockerRunner', () => {
         ctx.callback.calledWith(null, ctx.output).should.equal(true)
       })
     })
+
+    describe('WorkingDir with cwd', () => {
+      beforeEach(ctx => {
+        ctx.DockerRunner._runAndWaitForContainer = sinon
+          .stub()
+          .callsArgWith(3, null, (ctx.output = { stdout: 'mock-output' }))
+      })
+
+      it('should default WorkingDir to /compile when cwd is null', ctx => {
+        ctx.DockerRunner.run(
+          ctx.project_id,
+          ctx.command,
+          ctx.directory,
+          ctx.image,
+          ctx.timeout,
+          ctx.env,
+          ctx.compileGroup,
+          null,
+          ctx.callback
+        )
+        const options =
+          ctx.DockerRunner._runAndWaitForContainer.lastCall.args[0]
+        expect(options.WorkingDir).to.equal('/compile')
+      })
+
+      it('should join cwd onto /compile when provided', ctx => {
+        ctx.DockerRunner.run(
+          ctx.project_id,
+          ctx.command,
+          ctx.directory,
+          ctx.image,
+          ctx.timeout,
+          ctx.env,
+          ctx.compileGroup,
+          'subdir/nested',
+          ctx.callback
+        )
+        const options =
+          ctx.DockerRunner._runAndWaitForContainer.lastCall.args[0]
+        expect(options.WorkingDir).to.equal('/compile/subdir/nested')
+      })
+    })
   })
 
   describe('_runAndWaitForContainer', () => {
@@ -512,7 +606,7 @@ describe('DockerRunner', () => {
         attachStreamHandler,
         callback
       ) => {
-        attachStreamHandler(null, (ctx.output = 'mock-output'))
+        attachStreamHandler(null, (ctx.output = { stdout: 'mock-output' }))
         callback(null, (ctx.containerId = 'container-id'))
       }
       sinon.spy(ctx.DockerRunner, 'startContainer')
@@ -782,16 +876,25 @@ describe('DockerRunner', () => {
         const oneHourInSeconds = 60 * 60
         const oneHourInMilliseconds = oneHourInSeconds * 1000
         const nowInSeconds = Date.now() / 1000
+        ctx.recentlyAccessProjectId = '68494e7daa5c3680ee7182b1'
+        ctx.LastProjectAccess.getLastProjectAccessTime
+          .withArgs(ctx.recentlyAccessProjectId)
+          .returns(Date.now() - 1)
         ctx.containers = [
           {
-            Name: '/project-old-container-name',
+            Name: '/project-69b72c66b1a8c2f5846b24a8-container-name',
             Id: 'old-container-id',
             Created: nowInSeconds - oneHourInSeconds - 100,
           },
           {
-            Name: '/project-new-container-name',
+            Name: '/project-69b72c66b1a8c2f5846b24a9-container-name',
             Id: 'new-container-id',
             Created: nowInSeconds - oneHourInSeconds + 100,
+          },
+          {
+            Name: `/project-${ctx.recentlyAccessProjectId}-container-name`,
+            Id: 'recent-access-container-id',
+            Created: nowInSeconds - 2 * oneHourInSeconds,
           },
           {
             Name: '/totally-not-a-project-container',
@@ -816,13 +919,28 @@ describe('DockerRunner', () => {
     it('should destroy old containers', ctx => {
       ctx.DockerRunner.destroyContainer.callCount.should.equal(1)
       ctx.DockerRunner.destroyContainer
-        .calledWith('project-old-container-name', 'old-container-id')
+        .calledWith(
+          'project-69b72c66b1a8c2f5846b24a8-container-name',
+          'old-container-id'
+        )
         .should.equal(true)
     })
 
     it('should not destroy new containers', ctx => {
       ctx.DockerRunner.destroyContainer
-        .calledWith('project-new-container-name', 'new-container-id')
+        .calledWith(
+          'project-69b72c66b1a8c2f5846b24a9-container-name',
+          'new-container-id'
+        )
+        .should.equal(false)
+    })
+
+    it('should not destroy old containers that were recently used', ctx => {
+      ctx.DockerRunner.destroyContainer
+        .calledWith(
+          'project-68494e7daa5c3680ee7182b1-container-name',
+          'recent-access-container-id'
+        )
         .should.equal(false)
     })
 

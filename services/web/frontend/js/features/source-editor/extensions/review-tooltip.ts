@@ -14,8 +14,11 @@ import {
   SelectionRange,
   EditorState,
   Transaction,
+  Compartment,
+  TransactionSpec,
 } from '@codemirror/state'
 import { v4 as uuid } from 'uuid'
+import { isContextMenuMouseEvent } from '../utils/context-menu-mouse-event'
 
 export const addNewCommentRangeEffect = StateEffect.define<Range<Decoration>>()
 
@@ -51,7 +54,29 @@ export const buildAddNewCommentRangeEffect = (range: SelectionRange) => {
   )
 }
 
-export const reviewTooltip = (editorContextMenuEnabled = false): Extension => {
+const reviewTooltipCompartment = new Compartment()
+
+export const reviewTooltip = (
+  enabled: boolean,
+  editorContextMenuEnabled: boolean = false
+): Extension => {
+  return reviewTooltipCompartment.of(
+    enabled ? reviewTooltipEnabled(editorContextMenuEnabled) : []
+  )
+}
+
+export const setReviewTooltip = (
+  enabled: boolean,
+  editorContextMenuEnabled: boolean
+): TransactionSpec => ({
+  effects: reviewTooltipCompartment.reconfigure(
+    enabled ? reviewTooltipEnabled(editorContextMenuEnabled) : []
+  ),
+})
+
+export const reviewTooltipEnabled = (
+  editorContextMenuEnabled = false
+): Extension => {
   let mouseUpListener: null | (() => void) = null
   const disableMouseUpListener = () => {
     if (mouseUpListener) {
@@ -66,7 +91,7 @@ export const reviewTooltip = (editorContextMenuEnabled = false): Extension => {
     EditorView.domEventHandlers({
       mousedown: (event, view) => {
         // Hide tooltip when opening the context menu
-        if (editorContextMenuEnabled && (event.button === 2 || event.ctrlKey)) {
+        if (editorContextMenuEnabled && isContextMenuMouseEvent(event)) {
           return false
         }
 

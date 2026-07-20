@@ -7,6 +7,7 @@ import logger from '@overleaf/logger'
 import { expressify } from '@overleaf/promise-utils'
 import mongodb from 'mongodb-legacy'
 import ProjectDeleter from './ProjectDeleter.mjs'
+import { DeletedProjectReasons } from './DeletedProjectReasons.mjs'
 import ProjectDuplicator from './ProjectDuplicator.mjs'
 import ProjectCreationHandler from './ProjectCreationHandler.mjs'
 import EditorController from '../Editor/EditorController.mjs'
@@ -16,6 +17,7 @@ import { User } from '../../models/User.mjs'
 import SubscriptionLocator from '../Subscription/SubscriptionLocator.mjs'
 import SubscriptionHelper from '../Subscription/SubscriptionHelper.mjs'
 import LimitationsManager from '../Subscription/LimitationsManager.mjs'
+import { isProfessionalGroupPlan } from '../Subscription/PlansHelper.mjs'
 import Settings from '@overleaf/settings'
 import AuthorizationManager from '../Authorization/AuthorizationManager.mjs'
 import InactiveProjectManager from '../InactiveData/InactiveProjectManager.mjs'
@@ -52,7 +54,11 @@ import { isStandaloneAiAddOnPlanCode } from '../Subscription/AiHelper.mjs'
 import SubscriptionController from '../Subscription/SubscriptionController.mjs'
 import { formatCurrency } from '../../util/currency.js'
 import UserSettingsHelper from './UserSettingsHelper.mjs'
+import AiFeatureUsageRateLimiter from '../../infrastructure/rate-limiters/AiFeatureUsageRateLimiter.mjs'
+import WorkbenchRateLimiter from '../../infrastructure/rate-limiters/WorkbenchRateLimiter.mjs'
+import PermissionsManager from '../Authorization/PermissionsManager.mjs'
 
+const { checkUserPermissions } = PermissionsManager.promises
 const { isPaidSubscription } = SubscriptionHelper
 const { hasAdminAccess } = AdminAuthorizationHelper
 const { ObjectId } = mongodb
@@ -169,6 +175,7 @@ const _ProjectController = {
     await ProjectDeleter.promises.deleteProject(projectId, {
       deleterUser: user,
       ipAddress: req.ip,
+      deletedReason: DeletedProjectReasons.USER,
     })
     ProjectAuditLogHandler.addEntryIfManagedInBackground(
       projectId,
@@ -259,12 +266,17 @@ const _ProjectController = {
     res.setTimeout(5 * 60 * 1000) // allow extra time for the copy to complete
     metrics.inc('cloned-project')
     const projectId = req.params.Project_id
-    const { projectName, isDebugCopy, tags } = req.body
+    let { projectName, isDebugCopy, cloneHistory, cloneRanges, tags } = req.body
+    const currentUser = SessionManager.getSessionUser(req.session)
+    if (!hasAdminAccess(currentUser)) {
+      isDebugCopy = false
+      cloneHistory = false
+      cloneRanges = false
+    }
     logger.debug({ projectId, projectName, isDebugCopy }, 'cloning project')
     if (!SessionManager.isUserLoggedIn(req.session)) {
       return res.json({ redir: '/register' })
     }
-    const currentUser = SessionManager.getSessionUser(req.session)
     const { first_name: firstName, last_name: lastName, email } = currentUser
     try {
       const project = await ProjectDuplicator.promises.duplicate(
@@ -272,7 +284,7 @@ const _ProjectController = {
         projectId,
         projectName,
         tags,
-        isDebugCopy
+        { isDebugCopy, cloneHistory, cloneRanges }
       )
       ProjectAuditLogHandler.addEntryIfManagedInBackground(
         projectId,
@@ -404,15 +416,19 @@ const _ProjectController = {
         )
 
       if (domainCaptureRedirect === 'enabled') {
-        const subscription = (
+        const groupsWithEmails = (
           await Modules.promises.hooks.fire(
-            'findDomainCaptureGroupUserCouldBePartOf',
+            'findDomainCaptureGroupsUserCouldBePartOf',
             userId
           )
         )?.[0]
 
-        if (subscription) {
-          if (subscription.managedUsersEnabled) {
+        if (groupsWithEmails && groupsWithEmails.length > 0) {
+          if (
+            groupsWithEmails.some(
+              ({ subscription }) => subscription.managedUsersEnabled
+            )
+          ) {
             return res.redirect('/domain-capture')
           } else {
             // TODO show notification or anything else
@@ -433,6 +449,7 @@ const _ProjectController = {
     }
 
     const splitTests = [
+      'plugin-dimensions',
       'bibtex-visual-editor',
       'compile-log-events',
       'visual-preview',
@@ -446,24 +463,40 @@ const _ProjectController = {
       'track-pdf-download',
       !anonymous && 'writefull-oauth-promotion',
       'hotjar',
-      'overleaf-assist-bundle',
       'word-count-client',
-      'editor-popup-ux-survey',
-      'editor-redesign-new-users',
-      'writefull-frontend-migration',
+      'editor-popup-ux-survey-03-2026',
       'chat-edit-delete',
+      'comment-mentions',
       'ai-workbench-release',
       'compile-timeout-target-plans',
-      'writefull-keywords-generator',
       'writefull-figure-generator',
+      'writefull-toolbar-migration',
       'wf-citations-checker',
       'wf-citations-checker-on-selection',
       'writefull-asymetric-queue-size-per-model',
-      'writefull-encourage-prompt-for-paraphrase',
       'editor-context-menu',
       'email-notifications',
       'wf-enable-freemium-super-complete',
       'wf-enable-super-complete-promotion',
+      'wf-rebrand',
+      'plans-2026-phase-1',
+      'testing-ai-usage',
+      'wf-fake-non-english-suggestions',
+      'editor-tabs',
+      'overleaf-code',
+      'export-docx',
+      'sharing-updates',
+      'export-markdown',
+      'export-html',
+      'command-palette',
+      'overleaf-library',
+      'compile-timeout-cta',
+      'focus-mode',
+      'editor-upgrade-button-relocation',
+      'markdown-visual',
+      'ai-disabled-collaborators',
+      'group-link-sharing',
+      'compile-with-checkpoint',
     ].filter(Boolean)
 
     const getUserValues = async userId =>
@@ -472,7 +505,7 @@ const _ProjectController = {
           user: (async () => {
             const user = await User.findById(
               userId,
-              'email first_name last_name referal_id signUpDate featureSwitches features featuresEpoch refProviders alphaProgram betaProgram isAdmin ace labsProgram labsExperiments completedTutorials writefull aiErrorAssistant'
+              'email first_name last_name referal_id signUpDate featureSwitches features featuresEpoch refProviders alphaProgram betaProgram isAdmin ace labsProgram labsExperiments completedTutorials writefull aiFeatures'
             ).exec()
             // Handle case of deleted user
             if (!user) {
@@ -522,17 +555,16 @@ const _ProjectController = {
       const responses = await pProps({
         userValues: userId ? getUserValues(userId) : defaultUserValues(),
         project: ProjectGetter.promises.getProject(projectId, {
+          _id: 1,
           name: 1,
+          active: 1,
+          deferredTpdsFlushCounter: 1,
           lastUpdated: 1,
           track_changes: 1,
           owner_ref: 1,
           brandVariationId: 1,
           overleaf: 1,
           tokens: 1,
-          tokenAccessReadAndWrite_refs: 1, // used for link sharing analytics
-          collaberator_refs: 1, // used for link sharing analytics
-          pendingEditor_refs: 1, // used for link sharing analytics
-          reviewer_refs: 1,
         }),
         userIsMemberOfGroupSubscription: sessionUser
           ? (async () =>
@@ -542,15 +574,28 @@ const _ProjectController = {
                 )
               ).isMember)()
           : false,
-        _flushToTpds:
-          TpdsProjectFlusher.promises.flushProjectToTpdsIfNeeded(projectId),
-        _activate:
-          InactiveProjectManager.promises.reactivateProjectIfRequired(
-            projectId
+        activeProfessionalGroupSubscriptions:
+          SubscriptionLocator.promises.getUserActiveProfessionalGroupSubscriptions(
+            userId,
+            {
+              _id: 1,
+              teamName: 1,
+              sharingPermissions: 1,
+            }
           ),
       })
 
-      const { project, userValues, userIsMemberOfGroupSubscription } = responses
+      const {
+        project,
+        userValues,
+        userIsMemberOfGroupSubscription,
+        activeProfessionalGroupSubscriptions,
+      } = responses
+
+      await Promise.all([
+        InactiveProjectManager.promises.reactivateProjectIfRequired(project),
+        TpdsProjectFlusher.promises.flushProjectToTpdsIfNeeded(project),
+      ])
 
       const {
         user,
@@ -606,7 +651,11 @@ const _ProjectController = {
         req,
         projectId
       )
-      const imageNames = ProjectHelper.getAllowedImagesForUser(user)
+      const imageNames = await ProjectHelper.getAllowedImagesForUser(
+        req,
+        res,
+        user
+      )
 
       const privilegeLevel =
         await AuthorizationManager.promises.getPrivilegeLevelForProject(
@@ -688,9 +737,11 @@ const _ProjectController = {
         project.owner_ref
       )
       if (userId) {
+        const projectAccess =
+          await CollaboratorsGetter.promises.getProjectAccess(projectId)
         const planLimit = ownerFeatures?.collaborators || 0
-        const namedEditors = project.collaberator_refs?.length || 0
-        const pendingEditors = project.pendingEditor_refs?.length || 0
+        const { namedEditors, pendingEditors, tokenEditors } =
+          projectAccess.getStats()
         const exceedAtLimit = planLimit > -1 && namedEditors >= planLimit
 
         let mode = 'edit'
@@ -710,12 +761,12 @@ const _ProjectController = {
           projectId: project._id,
           namedEditors,
           pendingEditors,
-          tokenEditors: project.tokenAccessReadAndWrite_refs?.length || 0,
+          tokenEditors,
           planLimit,
           exceedAtLimit,
         }
-        AnalyticsManager.recordEventForUserInBackground(
-          userId,
+        AnalyticsManager.recordEventForSession(
+          req.session,
           'project-opened',
           projectOpenedSegmentation
         )
@@ -759,57 +810,50 @@ const _ProjectController = {
         !userHasPremiumSub &&
         !userInNonIndividualSub
 
-      let aiFeaturesAllowed = false
+      let aiFeaturesAllowedForUser = false
+      let aiFeaturesAllowedForProject = false
       if (userId && Features.hasFeature('saas')) {
         try {
-          // exit early if the user couldnt use ai anyways, since permissions checks are expensive
+          aiFeaturesAllowedForUser = await checkUserPermissions(user, [
+            'use-ai',
+          ])
+
           const canUserWriteOrReviewProjectContent =
             privilegeLevel === PrivilegeLevels.READ_AND_WRITE ||
             privilegeLevel === PrivilegeLevels.OWNER ||
             privilegeLevel === PrivilegeLevels.REVIEW
-
           if (canUserWriteOrReviewProjectContent) {
-            // check permissions for user and project owner, to see if they allow AI on the project
-            const permissionsResults = await Modules.promises.hooks.fire(
-              'projectAllowsCapability',
-              project,
-              userId,
+            aiFeaturesAllowedForProject = await checkUserPermissions(
+              project.owner_ref,
               ['use-ai']
             )
-            const aiAllowed = permissionsResults.every(
-              result => result === true
-            )
-
-            aiFeaturesAllowed = aiAllowed
           }
         } catch (err) {
           // still allow users to access project if we cant get their permissions, but disable AI feature
-          aiFeaturesAllowed = false
+          aiFeaturesAllowedForUser = false
+          aiFeaturesAllowedForProject = false
         }
       }
 
       let featureUsage = {}
 
-      if (Features.hasFeature('saas')) {
-        const usagesLeft = await Modules.promises.hooks.fire(
-          'remainingFeatureAllocation',
-          userId
-        )
-        usagesLeft?.forEach(usage => {
-          featureUsage = { ...featureUsage, ...usage }
-        })
+      if (Features.hasFeature('saas') && !anonymous) {
+        featureUsage = {
+          ...(await AiFeatureUsageRateLimiter.getRemainingFeatureUses(userId)),
+          ...(await WorkbenchRateLimiter.getRemainingTokens(userId)),
+        }
       }
 
       await ProjectController._setWritefullTrialState(
         user,
         userValues,
         userId,
-        aiFeaturesAllowed,
+        aiFeaturesAllowedForUser && aiFeaturesAllowedForProject,
         userIsMemberOfGroupSubscription
       )
 
-      AnalyticsManager.setUserPropertyForUserInBackground(
-        userId,
+      AnalyticsManager.setUserPropertyForSessionInBackground(
+        req.session,
         'customer-io-integration',
         true
       )
@@ -835,26 +879,27 @@ const _ProjectController = {
         capabilities.push('link-sharing')
       }
 
-      const isOverleafAssistBundleEnabled =
-        splitTestAssignments['overleaf-assist-bundle']?.variant === 'enabled'
-
       let fullFeatureSet = user?.features
       if (!anonymous) {
         fullFeatureSet = await UserGetter.promises.getUserFeatures(userId)
       }
 
       const hasPaidSubscription = isPaidSubscription(subscription)
-      const hasManuallyCollectedSubscription =
-        subscription?.collectionMethod === 'manual'
-      const assistantDisabled = user.aiErrorAssistant?.enabled === false // the assistant has been manually disabled by the user
-      const canUseErrorAssistant =
-        (!hasManuallyCollectedSubscription ||
-          fullFeatureSet?.aiErrorAssistant) &&
-        !assistantDisabled
+      const aiFeaturesDisabled = user.aiFeatures?.enabled === false
 
+      let showAiFeatures = aiFeaturesAllowedForUser && !aiFeaturesDisabled
+      let showAiFeaturesDisabled =
+        showAiFeatures && !aiFeaturesAllowedForProject
+      if (
+        splitTestAssignments['ai-disabled-collaborators']?.variant !== 'enabled'
+      ) {
+        showAiFeatures = showAiFeatures && !showAiFeaturesDisabled
+        showAiFeaturesDisabled = false
+      }
+
+      // only add-on is ai based, so we only need its pricing info if ai features are usable
       const addonPrices =
-        isOverleafAssistBundleEnabled &&
-        (await ProjectController._getAddonPrices(req, res))
+        showAiFeatures && (await ProjectController._getAddonPrices(req, res))
 
       let standardPlanPricing
       let recommendedCurrency
@@ -888,6 +933,14 @@ const _ProjectController = {
         user
       )
 
+      const initialLoadingScreenTheme = getInitialLoadingScreenTheme(
+        userSettings?.overallTheme
+      )
+
+      if (user.labsProgram) {
+        await Modules.promises.hooks.fire('assignLabsSplitTests', req, res)
+      }
+
       res.render(template, {
         title: project.name,
         priority_title: true,
@@ -911,9 +964,7 @@ const _ProjectController = {
           featureUsage,
           refProviders: _.mapValues(user.refProviders, Boolean),
           writefull: {
-            enabled: Boolean(user.writefull?.enabled && aiFeaturesAllowed),
             autoCreatedAccount: Boolean(user.writefull?.autoCreatedAccount),
-            firstAutoLoad: Boolean(user.writefull?.firstAutoLoad),
           },
           alphaProgram: user.alphaProgram,
           betaProgram: user.betaProgram,
@@ -923,11 +974,15 @@ const _ProjectController = {
           planCode,
           planName: planDetails?.name,
           isAnnualPlan: planCode && planDetails?.annual,
+          isProfessionalGroupPlan: Boolean(
+            subscription && isProfessionalGroupPlan(subscription)
+          ),
           isMemberOfGroupSubscription: userIsMemberOfGroupSubscription,
           hasInstitutionLicence: userHasInstitutionLicence,
+          activeProfessionalGroupSubscriptions,
         },
+        initialLoadingScreenTheme,
         userSettings,
-        labsExperiments: user.labsExperiments ?? [],
         privilegeLevel,
         anonymous,
         isTokenMember,
@@ -940,6 +995,7 @@ const _ProjectController = {
         capabilities,
         roMirrorOnClientNoLocalStorage:
           Settings.adminOnlyLogin || project.name.startsWith('Debug: '),
+        defaultLatexCompiler: Settings.defaultLatexCompiler,
         languages: Settings.languages,
         learnedWords,
         editorThemes: THEME_LIST,
@@ -958,7 +1014,14 @@ const _ProjectController = {
         showSymbolPalette,
         symbolPaletteAvailable: Features.hasFeature('symbol-palette'),
         userRestrictions: Array.from(req.userRestrictions || []),
-        showAiErrorAssistant: aiFeaturesAllowed && canUseErrorAssistant,
+        showAiFeatures,
+        showAiFeaturesDisabled,
+        // default to free tier if they dont have a quota
+        hasAiFreeTier:
+          fullFeatureSet?.aiUsageQuota === Settings.aiFeatures?.freeQuota ||
+          !fullFeatureSet?.aiUsageQuota,
+        hasUnlimitedAi:
+          fullFeatureSet?.aiUsageQuota === Settings.aiFeatures?.unlimitedQuota,
         detachRole,
         metadata: { viewport: false },
         showUpgradePrompt,
@@ -968,7 +1031,6 @@ const _ProjectController = {
         projectTags,
         isSaas: Features.hasFeature('saas'),
         shouldLoadHotjar,
-        isOverleafAssistBundleEnabled,
         customerIoEnabled: true,
         addonPrices,
         compileSettings: {
@@ -1013,6 +1075,7 @@ const _ProjectController = {
     }
   },
 
+  // todo: quota clean-up: these can be removed potentially?
   async _getAddonPrices(req, res, addonPlans = ['assistant']) {
     const plansData = {}
 
@@ -1077,10 +1140,11 @@ const _ProjectController = {
       refreshTimeoutHandler(),
       (async () => {
         try {
-          user.features = await FeaturesUpdater.promises.refreshFeatures(
+          const { features } = await FeaturesUpdater.promises.refreshFeatures(
             user._id,
             'load-editor'
           )
+          user.features = features
           metrics.inc('features-refresh', 1, {
             path: 'load-editor',
             status: 'success',
@@ -1244,6 +1308,10 @@ const _ProjectController = {
     aiFeaturesAllowed,
     userIsMemberOfGroupSubscription
   ) {
+    if (!aiFeaturesAllowed) {
+      return
+    }
+
     const affiliations = userValues.affiliations
     const affiliateLookupFailed = affiliations === false
 
@@ -1254,13 +1322,8 @@ const _ProjectController = {
         affiliation => affiliation.institution?.enterpriseCommons
       )
 
-    // check if a user has never tried writefull before (writefull.enabled will be null)
-    //  if they previously accepted writefull, or are have been already assigned to a trial, user.writefull will be true,
-    //  if they explicitly disabled it, user.writefull will be false
     const shouldPushWritefull =
-      aiFeaturesAllowed &&
-      user.writefull?.enabled === null &&
-      !userIsMemberOfGroupSubscription
+      user.writefull?.initialized === false && !userIsMemberOfGroupSubscription
 
     // we dont have legal approval to push enterprise commons into WF auto-account-create, but we are able to auto-load it into the toolbar
     const shouldAutoCreateAccount = shouldPushWritefull && !inEnterpriseCommons
@@ -1269,21 +1332,32 @@ const _ProjectController = {
     if (shouldAutoCreateAccount) {
       await UserUpdater.promises.updateUser(userId, {
         $set: {
-          writefull: { enabled: true, autoCreatedAccount: true },
+          writefull: { autoCreatedAccount: true, initialized: true },
         },
       })
-      user.writefull.enabled = true
       user.writefull.autoCreatedAccount = true
     } else if (shouldAutoLoad) {
       await UserUpdater.promises.updateUser(userId, {
         $set: {
-          writefull: { enabled: true, autoCreatedAccount: false },
+          writefull: { autoCreatedAccount: false, initialized: true },
         },
       })
-      user.writefull.enabled = true
       user.writefull.autoCreatedAccount = false
     }
   },
+}
+
+function getInitialLoadingScreenTheme(overallThemeSetting) {
+  switch (overallThemeSetting) {
+    case 'light-':
+      return 'light'
+    case '':
+      return 'dark'
+    case 'system':
+      return 'system'
+    default:
+      return 'dark'
+  }
 }
 
 const defaultSettingsForAnonymousUser = userId => ({
@@ -1308,6 +1382,9 @@ const defaultSettingsForAnonymousUser = userId => ({
   alphaProgram: false,
   betaProgram: false,
   writefull: {
+    initialized: true,
+  },
+  aiFeatures: {
     enabled: false,
   },
 })

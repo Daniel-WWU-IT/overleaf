@@ -2,19 +2,21 @@
 # Instead run bin/update_build_scripts from
 # https://github.com/overleaf/internal/
 
-BUILD_NUMBER ?= local
-BRANCH_NAME ?= $(shell git rev-parse --abbrev-ref HEAD)
-BRANCH_NAME_TAG_SAFE = $(shell echo $(BRANCH_NAME) | sed 's/\//\-\-/g')
-PROJECT_NAME = chat
+export BUILD_NUMBER ?= local
+export BRANCH_NAME ?= $(shell git rev-parse --abbrev-ref HEAD)
+export BRANCH_NAME_TAG_SAFE = $(shell echo $(BRANCH_NAME) | sed 's/\//\-\-/g' | cut -c1-96)
+export PROJECT_NAME = chat
 BUILD_DIR_NAME = $(shell pwd | xargs basename | tr -cd '[a-zA-Z0-9_.\-]')
 HERE=$(shell pwd)
 export MONOREPO ?= $(shell cd ../../ && pwd)
+export RETRIES ?= $(if $(CI),3,0)
 IMAGE_CI ?= ci/$(PROJECT_NAME):$(BRANCH_NAME_TAG_SAFE)-$(BUILD_NUMBER)
 IMAGE_REPO ?= us-east1-docker.pkg.dev/overleaf-ops/ol-docker/$(PROJECT_NAME)
 IMAGE_REPO_FINAL ?= $(IMAGE_REPO):$(BRANCH_NAME_TAG_SAFE)-$(BUILD_NUMBER)
 IMAGE_CACHE ?= $(IMAGE_REPO):cache-$(shell cat \
 	$(MONOREPO)/package.json \
-	$(MONOREPO)/package-lock.json \
+	$(MONOREPO)/yarn.lock \
+	$(MONOREPO)/libraries/eslint-plugin/package.json \
 	$(MONOREPO)/libraries/fetch-utils/package.json \
 	$(MONOREPO)/libraries/logger/package.json \
 	$(MONOREPO)/libraries/metrics/package.json \
@@ -24,15 +26,22 @@ IMAGE_CACHE ?= $(IMAGE_REPO):cache-$(shell cat \
 	$(MONOREPO)/libraries/settings/package.json \
 	$(MONOREPO)/services/chat/package.json \
 	$(MONOREPO)/tools/migrations/package.json \
-	$(MONOREPO)/patches/* \
+	$(MONOREPO)/.yarn/patches/* \
 | sha256sum | cut -d '-' -f1)
+export MOCHA_GREP ?=
 
 DOCKER_COMPOSE_FLAGS ?= -f docker-compose.yml
-DOCKER_COMPOSE := BUILD_NUMBER=$(BUILD_NUMBER) \
-	BRANCH_NAME=$(BRANCH_NAME_TAG_SAFE) \
-	PROJECT_NAME=$(PROJECT_NAME) \
-	MOCHA_GREP=${MOCHA_GREP} \
-	docker compose ${DOCKER_COMPOSE_FLAGS}
+DOCKER_COMPOSE := docker compose ${DOCKER_COMPOSE_FLAGS}
+
+# Common flags for docker compose run.
+# --rm           Tear down test runner container
+# --build        Make sure that we use the latest base image
+# --quiet-build  Hide build output
+ifeq ($(CI),true)
+	DC_RUN_FLAGS := --rm
+else
+	DC_RUN_FLAGS := --rm --build --quiet-build
+endif
 
 COMPOSE_PROJECT_NAME_TEST_ACCEPTANCE ?= test_acceptance_$(BUILD_DIR_NAME)
 DOCKER_COMPOSE_TEST_ACCEPTANCE = \
@@ -41,6 +50,10 @@ DOCKER_COMPOSE_TEST_ACCEPTANCE = \
 COMPOSE_PROJECT_NAME_TEST_UNIT ?= test_unit_$(BUILD_DIR_NAME)
 DOCKER_COMPOSE_TEST_UNIT = \
 	COMPOSE_PROJECT_NAME=$(COMPOSE_PROJECT_NAME_TEST_UNIT) $(DOCKER_COMPOSE)
+
+.PHONY: print-branch-tag-safe
+print-branch-tag-safe:
+	@echo $(BRANCH_NAME_TAG_SAFE)
 
 clean:
 	-docker rmi $(IMAGE_CI)
@@ -51,11 +64,11 @@ clean:
 
 # Run the linting commands in the scope of the monorepo.
 # Eslint and prettier (plus some configs) are on the root.
-RUN_LINTING = docker run --rm -v $(MONOREPO):$(MONOREPO) -w $(HERE) --user node node:24.13.0 npm run --silent
-RUN_LINTING_MONOREPO = docker run --rm -v $(MONOREPO):$(MONOREPO) -w $(MONOREPO) --user node node:24.13.0 npm run --silent
+RUN_LINTING = ../../bin/run -w /overleaf/services/$(PROJECT_NAME) monorepo yarn run --silent
+RUN_LINTING_MONOREPO = ../../bin/run monorepo yarn run --silent
 
-RUN_LINTING_CI = docker run --rm --volume $(MONOREPO)/.editorconfig:/overleaf/.editorconfig --volume $(MONOREPO)/.eslintignore:/overleaf/.eslintignore --volume $(MONOREPO)/.eslintrc:/overleaf/.eslintrc --volume $(MONOREPO)/.prettierignore:/overleaf/.prettierignore --volume $(MONOREPO)/.prettierrc:/overleaf/.prettierrc --volume $(MONOREPO)/tsconfig.backend.json:/overleaf/tsconfig.backend.json --volume $(MONOREPO)/services/chat/reports:/overleaf/services/chat/reports --volume $(MONOREPO)/node_modules/.cache:/overleaf/node_modules/.cache $(IMAGE_CI) npm run --silent
-RUN_LINTING_CI_MONOREPO = docker run --rm --volume $(MONOREPO)/.editorconfig:/overleaf/.editorconfig --volume $(MONOREPO)/.eslintignore:/overleaf/.eslintignore --volume $(MONOREPO)/.eslintrc:/overleaf/.eslintrc --volume $(MONOREPO)/.prettierignore:/overleaf/.prettierignore --volume $(MONOREPO)/.prettierrc:/overleaf/.prettierrc --volume $(MONOREPO)/tsconfig.backend.json:/overleaf/tsconfig.backend.json --volume $(MONOREPO)/services/chat/reports:/overleaf/services/chat/reports --volume $(MONOREPO)/node_modules/.cache:/overleaf/node_modules/.cache -w /overleaf $(IMAGE_CI) npm run --silent
+RUN_LINTING_CI = docker run --rm --volume $(MONOREPO)/.editorconfig:/overleaf/.editorconfig --volume $(MONOREPO)/eslint.config.mjs:/overleaf/eslint.config.mjs --volume $(MONOREPO)/.prettierignore:/overleaf/.prettierignore --volume $(MONOREPO)/.prettierrc.cjs:/overleaf/.prettierrc.cjs --volume $(MONOREPO)/tsconfig.backend.json:/overleaf/tsconfig.backend.json --volume $(MONOREPO)/services/chat/reports:/overleaf/services/chat/reports --volume $(MONOREPO)/.cache:/overleaf/.cache $(IMAGE_CI) yarn run --silent
+RUN_LINTING_CI_MONOREPO = docker run --rm --volume $(MONOREPO)/.editorconfig:/overleaf/.editorconfig --volume $(MONOREPO)/eslint.config.mjs:/overleaf/eslint.config.mjs --volume $(MONOREPO)/.prettierignore:/overleaf/.prettierignore --volume $(MONOREPO)/.prettierrc.cjs:/overleaf/.prettierrc.cjs --volume $(MONOREPO)/tsconfig.backend.json:/overleaf/tsconfig.backend.json --volume $(MONOREPO)/services/chat/reports:/overleaf/services/chat/reports --volume $(MONOREPO)/.cache:/overleaf/.cache -w /overleaf $(IMAGE_CI) yarn run --silent
 
 SHELLCHECK_OPTS = \
 	--shell=bash \
@@ -85,28 +98,28 @@ WITH_CACHE_FOLDER = \
 	typecheck \
 	typecheck_ci \
 
-$(WITH_CACHE_FOLDER): ../../node_modules/.cache/prettier/
-../../node_modules/.cache/prettier/:
+$(WITH_CACHE_FOLDER): ../../.cache/prettier/
+../../.cache/prettier/:
 	mkdir -p $@
 
-$(WITH_CACHE_FOLDER): ../../node_modules/.cache/eslint/
-../../node_modules/.cache/eslint/:
+$(WITH_CACHE_FOLDER): ../../.cache/eslint/
+../../.cache/eslint/:
 	mkdir -p $@
 
 format:
-	$(RUN_LINTING_MONOREPO) format -- services/chat
+	$(RUN_LINTING_MONOREPO) format services/chat
 
 format_ci:
-	$(RUN_LINTING_CI_MONOREPO) format -- services/chat
+	$(RUN_LINTING_CI_MONOREPO) format services/chat
 
 format_fix:
-	$(RUN_LINTING_MONOREPO) format:fix -- services/chat
+	$(RUN_LINTING_MONOREPO) format:fix services/chat
 
 lint:
 	$(RUN_LINTING) lint
 
 lint_ci:
-	-$(RUN_LINTING_CI) lint -- --format json --output-file reports/eslint.json
+	-$(RUN_LINTING_CI) lint --format json --output-file reports/eslint.json
 	sed -i 's_"filePath":"/overleaf_"filePath":"$(MONOREPO)_g' reports/eslint.json
 
 lint_fix:
@@ -122,7 +135,7 @@ test: format lint typecheck shellcheck test_unit test_acceptance
 
 test_unit:
 ifneq (,$(wildcard test/unit))
-	$(DOCKER_COMPOSE_TEST_UNIT) run --rm test_unit
+	$(DOCKER_COMPOSE_TEST_UNIT) run $(DC_RUN_FLAGS) test_unit
 endif
 
 test_clean: test_unit_clean
@@ -139,12 +152,12 @@ test_acceptance_debug: test_acceptance_clean test_acceptance_pre_run test_accept
 
 test_acceptance_run:
 ifneq (,$(wildcard test/acceptance))
-	$(DOCKER_COMPOSE_TEST_ACCEPTANCE) run --rm test_acceptance
+	$(DOCKER_COMPOSE_TEST_ACCEPTANCE) run $(DC_RUN_FLAGS) test_acceptance
 endif
 
 test_acceptance_run_debug:
 ifneq (,$(wildcard test/acceptance))
-	$(DOCKER_COMPOSE_TEST_ACCEPTANCE) run -p 127.0.0.9:19999:19999 --rm test_acceptance npm run test:acceptance -- --inspect=0.0.0.0:19999 --inspect-brk
+	$(DOCKER_COMPOSE_TEST_ACCEPTANCE) run -p 127.0.0.9:19999:19999 $(DC_RUN_FLAGS) test_acceptance yarn run --inspect=0.0.0.0:19999 --inspect-brk test:acceptance
 endif
 
 test_clean: test_acceptance_clean
@@ -153,11 +166,11 @@ test_acceptance_clean:
 
 test_acceptance_pre_run:
 ifneq (,$(wildcard test/acceptance/js/scripts/pre-run))
-	$(DOCKER_COMPOSE_TEST_ACCEPTANCE) run --rm test_acceptance test/acceptance/js/scripts/pre-run
+	$(DOCKER_COMPOSE_TEST_ACCEPTANCE) run $(DC_RUN_FLAGS) test_acceptance test/acceptance/js/scripts/pre-run
 endif
 
 benchmarks:
-	$(DOCKER_COMPOSE_TEST_ACCEPTANCE) run --rm test_acceptance npm run benchmarks
+	$(DOCKER_COMPOSE_TEST_ACCEPTANCE) run $(DC_RUN_FLAGS) test_acceptance yarn run benchmarks
 
 build:
 	docker build \

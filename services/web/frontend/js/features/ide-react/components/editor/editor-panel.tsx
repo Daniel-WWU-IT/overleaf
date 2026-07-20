@@ -1,15 +1,19 @@
 import NoSelectionPane from '@/features/ide-react/components/editor/no-selection-pane'
-import { Editor } from '@/features/ide-redesign/components/editor'
+import { Editor } from '@/features/ide-react/components/layout/editor'
 import { useFileTreeOpenContext } from '@/features/ide-react/context/file-tree-open-context'
 import FileView from '@/features/file-view/components/file-view'
 import { fileViewFile } from '@/features/ide-react/util/file-view'
 import MultipleSelectionPane from '@/features/ide-react/components/editor/multiple-selection-pane'
+import { TabsContainer } from '@/features/source-editor/components/tabs/tabs-container'
+import { useAreTabsEnabled } from '../../hooks/use-are-tabs-enabled'
 
 export default function EditorPanel() {
   const { selectedEntityCount, openEntity } = useFileTreeOpenContext()
+  const tabsEnabled = useAreTabsEnabled()
 
   return (
     <div className="ide-redesign-editor-container">
+      {tabsEnabled && <TabsContainer />}
       {selectedEntityCount === 0 && <NoSelectionPane />}
       {selectedEntityCount === 1 && openEntity?.type === 'fileRef' && (
         <FileView

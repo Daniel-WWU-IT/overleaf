@@ -23,9 +23,18 @@ export type RailTabKey =
   | 'review-panel'
   | 'chat'
   | 'full-project-search'
+  | 'dimensions'
   | 'workbench'
 
-export type RailModalKey = 'keyboard-shortcuts' | 'contact-us' | 'dictionary'
+export type RailModalKey =
+  | 'keyboard-shortcuts'
+  | 'contact-us'
+  | 'dictionary'
+  | 'labs'
+
+export function dispatchOpenRailModal(key: RailModalKey) {
+  window.dispatchEvent(new CustomEvent('ui:open-rail-modal', { detail: key }))
+}
 
 const RailContext = createContext<
   | {
@@ -117,6 +126,16 @@ export const RailProvider: FC<React.PropsWithChildren> = ({ children }) => {
         openTab('review-panel')
       }
     }, [handlePaneCollapse, selectedTab, isOpen, openTab])
+  )
+
+  useEventListener(
+    'ui:open-rail-modal',
+    useCallback(
+      (event: Event) => {
+        setActiveModal((event as CustomEvent<RailModalKey>).detail)
+      },
+      [setActiveModal]
+    )
   )
 
   useEventListener(

@@ -19,7 +19,12 @@ const MANAGED_GROUP_PROJECT_EVENTS = [
   'project-history-version-restored',
   'project-history-version-downloaded',
   'transfer-ownership',
+  'remove-collaborator',
+  'revoke-invite',
+  'toggle-access-level',
   'project-downloaded',
+  'sharing-link-created',
+  'sharing-link-updated',
 ]
 
 async function findManagedSubscriptions(entry) {

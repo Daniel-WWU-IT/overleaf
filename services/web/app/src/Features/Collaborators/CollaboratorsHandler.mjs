@@ -7,10 +7,12 @@ import ContactManager from '../Contacts/ContactManager.mjs'
 import PrivilegeLevels from '../Authorization/PrivilegeLevels.mjs'
 import TpdsProjectFlusher from '../ThirdPartyDataStore/TpdsProjectFlusher.mjs'
 import CollaboratorsGetter from './CollaboratorsGetter.mjs'
+import CollaboratorsInviteHelper from './CollaboratorsInviteHelper.mjs'
 import Errors from '../Errors/Errors.js'
 import TpdsUpdateSender from '../ThirdPartyDataStore/TpdsUpdateSender.mjs'
 import EditorRealTimeController from '../Editor/EditorRealTimeController.mjs'
 import ProjectAuditLogHandler from '../Project/ProjectAuditLogHandler.mjs'
+import AsyncLocalStorage from '../../infrastructure/AsyncLocalStorage.mjs'
 
 export default {
   userIsTokenMember: callbackify(userIsTokenMember),
@@ -30,6 +32,7 @@ export default {
 }
 
 async function removeUserFromProject(projectId, userId) {
+  AsyncLocalStorage.removeItem(`projectAccess:${projectId}`)
   try {
     await Project.updateOne(
       { _id: projectId },
@@ -96,6 +99,7 @@ async function addUserIdToProject(
   privilegeLevel,
   { pendingEditor, pendingReviewer } = {}
 ) {
+  AsyncLocalStorage.removeItem(`projectAccess:${projectId}`)
   const project = await ProjectGetter.promises.getProject(projectId, {
     owner_ref: 1,
     name: 1,
@@ -198,6 +202,9 @@ async function transferProjects(fromUserId, toUserId) {
   ).exec()
   const projectIds = projects.map(p => p._id)
   logger.debug({ projectIds, fromUserId, toUserId }, 'transferring projects')
+  for (const projectId of projectIds) {
+    AsyncLocalStorage.removeItem(`projectAccess:${projectId}`)
+  }
 
   await Project.updateMany(
     { owner_ref: fromUserId },
@@ -272,6 +279,7 @@ async function setCollaboratorPrivilegeLevel(
   { pendingEditor, pendingReviewer } = {},
   auditInfo = {}
 ) {
+  AsyncLocalStorage.removeItem(`projectAccess:${projectId}`)
   // Make sure we're only updating the project if the user is already a
   // collaborator
   const query = {
@@ -361,7 +369,7 @@ async function setCollaboratorPrivilegeLevel(
     auditInfo.ipAddress,
     {
       userId,
-      role: _privilegeLevelToRole(privilegeLevel),
+      role: CollaboratorsInviteHelper.privilegeLevelToRole(privilegeLevel),
     }
   )
 
@@ -371,19 +379,6 @@ async function setCollaboratorPrivilegeLevel(
       'toggle-track-changes',
       update.$set.track_changes
     )
-  }
-}
-
-function _privilegeLevelToRole(privilegeLevel) {
-  switch (privilegeLevel) {
-    case 'readOnly':
-      return 'Viewer'
-    case 'readAndWrite':
-      return 'Editor'
-    case 'review':
-      return 'Reviewer'
-    default:
-      return privilegeLevel
   }
 }
 

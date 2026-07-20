@@ -3,7 +3,10 @@ import Stripe from 'stripe'
 type StripeSubscription = Stripe.Subscription & {
   metadata: {
     billing_migration_id?: string
-    recurly_to_stripe_migration_status?: 'in_progress' | 'completed'
+    recurly_to_stripe_migration_status?:
+      | 'in_progress'
+      | 'completed'
+      | 'cancelled'
   }
   customer: string
 }
@@ -16,6 +19,7 @@ export interface CustomerSubscriptionUpdatedWebhookEvent
     // https://docs.stripe.com/api/events/object?api-version=2025-04-30.basil#event_object-data-previous_attributes
     previous_attributes: {
       cancel_at_period_end?: boolean // will only be present if the subscription was cancelled or reactivated
+      cancel_at?: number | null // will only be present if the subscription was cancelled or reactivated
       items?: {
         // will be present if the subscription was downgraded, upgraded, or renewed
         data: [
@@ -57,7 +61,10 @@ export interface InvoicePaidWebhookEvent extends Stripe.EventBase {
         subscription_details: Stripe.Invoice.Parent.SubscriptionDetails & {
           metadata: {
             billing_migration_id?: string
-            recurly_to_stripe_migration_status?: 'in_progress' | 'completed'
+            recurly_to_stripe_migration_status?:
+              | 'in_progress'
+              | 'completed'
+              | 'cancelled'
           }
         }
       }
@@ -138,6 +145,20 @@ export interface CustomerUpdatedWebhookEvent extends Stripe.EventBase {
   }
 }
 
+export interface CustomerTaxIdUpdatedWebhookEvent extends Stripe.EventBase {
+  type: 'customer.tax_id.updated'
+  data: {
+    object: Stripe.TaxId
+    previous_attributes?: {
+      verification?: {
+        status?: Stripe.TaxId.Verification.Status
+      }
+    }
+  }
+}
+
+export type MandateUpdatedWebhookEvent = Stripe.MandateUpdatedEvent
+
 export type CustomerSubscriptionWebhookEvent =
   | CustomerSubscriptionUpdatedWebhookEvent
   | CustomerSubscriptionCreatedWebhookEvent
@@ -153,3 +174,5 @@ export type WebhookEvent =
   | InvoiceOverdueWebhookEvent
   | CustomerCreatedWebhookEvent
   | CustomerUpdatedWebhookEvent
+  | CustomerTaxIdUpdatedWebhookEvent
+  | MandateUpdatedWebhookEvent

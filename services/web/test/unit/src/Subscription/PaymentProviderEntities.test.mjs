@@ -762,7 +762,7 @@ describe('PaymentProviderEntities', function () {
             new PaymentProviderSubscriptionChange({
               subscription: ctx.subscription,
               nextPlanCode: 'group_professional_10_educational',
-              nextPlanName: 'Group Professional Educational',
+              nextPlanName: 'Pro group with edu discount',
               nextPlanPrice: 100,
               nextAddOns: [additionalLicenseAddOn],
             })
@@ -805,7 +805,7 @@ describe('PaymentProviderEntities', function () {
             new PaymentProviderSubscriptionChange({
               subscription: ctx.subscription,
               nextPlanCode: 'group_professional_10_educational',
-              nextPlanName: 'Group Professional Educational',
+              nextPlanName: 'Pro group with edu discount',
               nextPlanPrice: 100,
               nextAddOns: [aiAddOn, additionalLicenseAddOn],
             })
@@ -857,75 +857,6 @@ describe('PaymentProviderEntities', function () {
             expect(() =>
               ctx.subscription.getRequestForAddOnReactivation('some-add-on')
             ).to.throw(Errors.AddOnNotPresentError)
-          })
-        })
-
-        describe('getRequestForPlanRevert()', function () {
-          beforeEach(function (ctx) {
-            const { PaymentProviderSubscription } = ctx.PaymentProviderEntities
-            ctx.subscription = new PaymentProviderSubscription({
-              id: 'subscription-id',
-              userId: 'user-id',
-              planCode: 'regular-plan',
-              planName: 'My Plan',
-              planPrice: 10,
-              addOns: [
-                {
-                  addOnCode: 'addon-1',
-                  quantity: 2,
-                  unitAmountInCents: 500,
-                },
-                {
-                  addOnCode: 'addon-2',
-                  quantity: 1,
-                  unitAmountInCents: 600,
-                },
-              ],
-              subtotal: 10.99,
-              taxRate: 0.2,
-              taxAmount: 2.4,
-              total: 14.4,
-              currency: 'USD',
-            })
-          })
-
-          it('throws if the plan to revert to doesnt exist', function (ctx) {
-            const invalidPlanCode = 'non-existent-plan'
-            expect(() =>
-              ctx.subscription.getRequestForPlanRevert(invalidPlanCode, null)
-            ).to.throw('Unable to find plan in settings')
-          })
-
-          it('creates a change request with the restore point', function (ctx) {
-            const previousPlanCode = 'cheap-plan'
-            const previousAddOns = [
-              { addOnCode: 'addon-1', quantity: 1, unitAmountInCents: 500 },
-            ]
-            const changeRequest = ctx.subscription.getRequestForPlanRevert(
-              previousPlanCode,
-              previousAddOns
-            )
-            expect(changeRequest).to.be.an.instanceOf(
-              ctx.PaymentProviderEntities
-                .PaymentProviderSubscriptionChangeRequest
-            )
-            expect(changeRequest.planCode).to.equal(previousPlanCode)
-            expect(changeRequest.addOnUpdates).to.deep.equal([
-              {
-                code: 'addon-1',
-                quantity: 1,
-                unitPrice: 5,
-              },
-            ])
-          })
-
-          it('defaults to addons to an empty array to clear the addon state', function (ctx) {
-            const previousPlanCode = 'cheap-plan'
-            const changeRequest = ctx.subscription.getRequestForPlanRevert(
-              previousPlanCode,
-              null
-            )
-            expect(changeRequest.addOnUpdates).to.deep.equal([])
           })
         })
       })

@@ -10,11 +10,11 @@ The rest of the Overleaf stack, along with information about contributing can be
 
 ### Running the app
 
-The app runs natively using npm and Node on the local system:
+The app runs natively using yarn and Node on the local system:
 
 ```
-$ npm install
-$ npm run start
+$ yarn install
+$ yarn run start
 ```
 
 ### Running Tests

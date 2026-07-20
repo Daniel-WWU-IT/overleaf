@@ -62,8 +62,15 @@ if (Settings.catchErrors) {
 // Create ./data/dumpFolder if needed
 FileWriter.ensureDumpFolderExists()
 
-// handle SIGTERM for graceful shutdown in kubernetes
+// Handle SIGTERM with graceful shutdown by default, or a fast exit in development
 process.on('SIGTERM', function (signal) {
+  if (process.env.NODE_ENV === 'development') {
+    logger.warn({ signal }, 'triggering fast shutdown in dev environment')
+    setTimeout(() => {
+      process.exit(0)
+    }, 100)
+    return
+  }
   triggerGracefulShutdown(Server.server, signal)
 })
 

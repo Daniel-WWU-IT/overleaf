@@ -1,6 +1,5 @@
 import logger from '@overleaf/logger'
 import OError from '@overleaf/o-error'
-import request from 'request'
 import * as UpdatesProcessor from './UpdatesProcessor.js'
 import * as SummarizedUpdatesManager from './SummarizedUpdatesManager.js'
 import * as DiffManager from './DiffManager.js'
@@ -15,11 +14,128 @@ import * as LabelsManager from './LabelsManager.js'
 import * as HistoryApiManager from './HistoryApiManager.js'
 import * as RetryManager from './RetryManager.js'
 import * as FlushManager from './FlushManager.js'
-import { pipeline } from 'node:stream'
-import { RequestFailedError } from '@overleaf/fetch-utils'
+import Stream, { pipeline } from 'node:stream'
+import { fetchNothing, RequestFailedError } from '@overleaf/fetch-utils'
 import { z, zz, parseReq } from '@overleaf/validation-tools'
+import { IncrementalResponse } from '@overleaf/stream-utils'
 
 const ONE_DAY_IN_SECONDS = 24 * 60 * 60
+
+const cloneProjectSchema = z.object({
+  body: z.object({
+    targetProjectId: z.string(),
+  }),
+
+  params: z.object({
+    project_id: z.string(),
+  }),
+})
+
+export function cloneProject(req, res) {
+  const {
+    params: { project_id: sourceProjectId },
+    body: { targetProjectId },
+  } = parseReq(req, cloneProjectSchema)
+  const incrResp = new IncrementalResponse({
+    res,
+    timeout: 10 * 60_000 - 5_000,
+    logger,
+    label: 'clone history in project-history',
+    info: { targetProjectId, sourceProjectId },
+  })
+
+  incrResp.sendUpdate('best effort history flush: pending')
+  UpdatesProcessor.processUpdatesForProject(sourceProjectId, err => {
+    if (err) {
+      logger.warn(
+        { err, sourceProjectId },
+        'failed to flush during history clone'
+      )
+      incrResp.sendUpdate(
+        'best effort history flush: failed, a resync will be required'
+      )
+    } else {
+      incrResp.sendUpdate('best effort history flush: done')
+    }
+
+    WebApiManager.getHistoryId(targetProjectId, (err, targetHistoryId) => {
+      if (err) return incrResp.fail(OError.tag(err, 'get target historyId'))
+      WebApiManager.getHistoryId(sourceProjectId, (err, sourceHistoryId) => {
+        if (err) return incrResp.fail(OError.tag(err, 'get source historyId'))
+
+        incrResp.sendUpdate('cloning full project history data: pending')
+        HistoryStoreManager.cloneProject(
+          sourceHistoryId.toString(),
+          targetHistoryId.toString(),
+          incrResp.signal(),
+          (err, stream) => {
+            if (err) {
+              incrResp.fail(OError.tag(err, 'clone history-v1 data'))
+              return
+            }
+
+            // aborted. pipeline() would throw.
+            if (res.destroyed) {
+              stream.destroy()
+              incrResp.fail(new Error('request aborted'))
+              return
+            }
+
+            // The stream.pipeline callback API does not support options.
+            Stream.promises.pipeline(stream, res, { end: false }).then(
+              () => {
+                incrResp.sendUpdate('clone labels: pending')
+                LabelsManager.cloneLabels(
+                  sourceProjectId,
+                  targetProjectId,
+                  err => {
+                    if (err) {
+                      incrResp.fail(OError.tag(err, 'clone labels'))
+                      return
+                    }
+                    incrResp.sendUpdate('clone labels: done')
+
+                    incrResp.sendUpdate('clone resync state: pending')
+                    SyncManager.cloneResyncState(
+                      sourceProjectId,
+                      targetProjectId,
+                      err => {
+                        if (err) {
+                          incrResp.fail(OError.tag(err, 'clone resync state'))
+                          return
+                        }
+                        incrResp.sendUpdate('clone resync state: done')
+
+                        incrResp.sendUpdate('clone failure record: pending')
+                        ErrorRecorder.cloneFailure(
+                          sourceProjectId,
+                          targetProjectId,
+                          err => {
+                            if (err) {
+                              incrResp.fail(OError.tag(err, 'clone failure'))
+                              return
+                            }
+                            incrResp.sendUpdate('clone failure record: done')
+
+                            incrResp.sendUpdate('done')
+                            incrResp.end()
+                          }
+                        )
+                      }
+                    )
+                  }
+                )
+              },
+              err => {
+                incrResp.fail(OError.tag(err, 'stream history-v1 response'))
+              }
+            )
+          }
+        )
+      })
+    })
+  })
+}
 
 const getProjectBlobSchema = z.object({
   params: z.object({
@@ -242,6 +358,54 @@ export function getUpdates(req, res, next) {
       })
     }
   )
+}
+
+const getResyncPendingSchema = z.object({
+  params: z.object({
+    project_id: zz.objectId(),
+  }),
+})
+
+export function getResyncPending(req, res, next) {
+  const {
+    params: { project_id: projectId },
+  } = parseReq(req, getResyncPendingSchema)
+  SyncManager.getResyncState(projectId, (err, state) => {
+    if (err) return next(err)
+    res.json({
+      resyncPending: state.isSyncOngoing(),
+      syncStuck: state.isSyncStuck(),
+    })
+  })
+}
+
+const getDebugInfoSchema = z.object({
+  params: z.object({
+    project_id: zz.objectId(),
+  }),
+})
+
+export function getDebugInfo(req, res, next) {
+  const {
+    params: { project_id: projectId },
+  } = parseReq(req, getDebugInfoSchema)
+  SyncManager.getResyncState(projectId, (err, state) => {
+    if (err) return next(err)
+    ErrorRecorder.getFailureRecord(projectId, (err, failureRecord) => {
+      if (err) return next(err)
+      res.json({
+        failureRecord,
+        syncState: {
+          resyncPending: state.isSyncOngoing(),
+          resyncCount: state.resyncCount,
+          resyncPendingSince: state.resyncPendingSince,
+          lastUpdated: state.lastUpdated,
+          history: state.history,
+          ...state.toRaw(),
+        },
+      })
+    })
+  })
 }
 
 const latestVersionSchema = z.object({
@@ -481,9 +645,11 @@ const resyncProjectSchema = z.object({
   }),
   query: z.object({
     force: z.stringbool().default(false),
+    recoverCorruptedFiles: z.stringbool().default(false),
   }),
   body: z.object({
     force: z.boolean().default(false),
+    recoverCorruptedFiles: z.boolean().default(false),
     origin: z
       .object({
         kind: z.string(),
@@ -504,6 +670,9 @@ export function resyncProject(req, res, next) {
     options.historyRangesMigration = body.historyRangesMigration
   }
   if (query.force || body.force) {
+    if (query.recoverCorruptedFiles || body.recoverCorruptedFiles) {
+      options.recoverCorruptedFiles = true
+    }
     // this will delete the queue and clear the sync state
     // use if the project is completely broken
     SyncManager.startHardResync(projectId, options, error => {
@@ -568,6 +737,13 @@ export function getFailures(req, res, next) {
       return next(error)
     }
     res.send({ failures: result })
+  })
+}
+
+export function getFailuresFull(req, res, next) {
+  ErrorRecorder.getFailuresFull((error, result) => {
+    if (error) return next(error)
+    res.send(result)
   })
 }
 
@@ -753,7 +929,9 @@ export function retryFailures(req, res, next) {
             const found = key.match(/^X-CALLBACK-(.*)/i)
             callbackHeaders[found[1]] = req.headers[key]
           }
-          request({ url: callbackUrl, headers: callbackHeaders })
+          fetchNothing(callbackUrl, { headers: callbackHeaders }).catch(err => {
+            logger.warn({ err }, 'failed to ping callback url')
+          })
         }
       } else {
         if (error != null) {

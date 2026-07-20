@@ -27,10 +27,13 @@ function SubscriptionDashboard() {
     personalSubscription,
   } = useSubscriptionDashboardContext()
 
+  const fromPlansPage = new URLSearchParams(window.location.search).has(
+    'hasSubscription'
+  )
+
   const subscription = personalSubscription as PaidSubscription
 
   const hasAiAssistViaWritefull = getMeta('ol-hasAiAssistViaWritefull')
-  const fromPlansPage = getMeta('ol-fromPlansPage')
   const hasRedirectedPaymentError = Boolean(
     getMeta('ol-subscriptionPaymentErrorCode')
   )

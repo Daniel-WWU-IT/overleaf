@@ -15,6 +15,10 @@ services:
       - .:/overleaf/services/filestore
       - ../../node_modules:/overleaf/node_modules
       - ../../libraries:/overleaf/libraries
+      - ../../package.json:/overleaf/package.json
+      - ../../.yarnrc.yml:/overleaf/.yarnrc.yml
+      - ../../yarn.lock:/overleaf/yarn.lock
+      - ../../.yarn:/overleaf/.yarn
       - ../../tsconfig.backend.json:/overleaf/tsconfig.backend.json
     working_dir: /overleaf/services/filestore
     environment:
@@ -23,7 +27,7 @@ services:
       MONGO_CONNECTION_STRING: mongodb://mongo/test-overleaf
       NODE_ENV: test
       NODE_OPTIONS: "--unhandled-rejections=strict"
-    command: npm run --silent test:unit
+    command: yarn run --silent test:unit
     user: node
 
   test_acceptance:
@@ -35,9 +39,14 @@ services:
       - .:/overleaf/services/filestore
       - ../../node_modules:/overleaf/node_modules
       - ../../libraries:/overleaf/libraries
+      - ../../package.json:/overleaf/package.json
+      - ../../.yarnrc.yml:/overleaf/.yarnrc.yml
+      - ../../yarn.lock:/overleaf/yarn.lock
+      - ../../.yarn:/overleaf/.yarn
       - minio-certs:/certs
     working_dir: /overleaf/services/filestore
     environment:
+      RETRIES:
       MONGO_CONNECTION_STRING: mongodb://mongo/test-overleaf
       POSTGRES_HOST: postgres
       AWS_S3_ENDPOINT: https://minio:9000
@@ -54,8 +63,8 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-}
       NODE_ENV: test
       NODE_OPTIONS: "--unhandled-rejections=strict"
-      ENABLE_CONVERSIONS: "true"
-      USE_PROM_METRICS: "true"
+      ENABLE_CONVERSIONS: true
+      USE_PROM_METRICS: true
       AWS_S3_USER_FILES_STORAGE_CLASS: REDUCED_REDUNDANCY
       AWS_S3_USER_FILES_BUCKET_NAME: fake-user-files
       AWS_S3_USER_FILES_DEK_BUCKET_NAME: fake-user-files-dek
@@ -72,12 +81,12 @@ services:
         condition: service_completed_successfully
       gcs:
         condition: service_healthy
-    command: npm run --silent test:acceptance
+    command: yarn run --silent test:acceptance
 
   certs:
     build:
       dockerfile_inline: |
-        FROM node:24.13.0
+        FROM node:24.14.1
         RUN wget -O /certgen "https://github.com/minio/certgen/releases/download/v1.3.0/certgen-linux-"`dpkg --print-architecture`
         RUN chmod +x /certgen
     volumes:

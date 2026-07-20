@@ -18,6 +18,7 @@ import EmailHandler from '../Email/EmailHandler.mjs'
 import UrlHelper from '../Helpers/UrlHelper.mjs'
 import { promisify } from 'node:util'
 import { expressify } from '@overleaf/promise-utils'
+import { sanitizeControlCharacters } from '../../infrastructure/Sanitize.mjs'
 import { acceptsJson } from '../../infrastructure/RequestContentTypeDetection.mjs'
 import Modules from '../../infrastructure/Modules.mjs'
 import OneTimeTokenHandler from '../Security/OneTimeTokenHandler.mjs'
@@ -292,6 +293,9 @@ async function tryDeleteUser(req, res, next) {
   UserSessionsManager.promises.untrackSession(user, sessionId).catch(err => {
     logger.warn({ err, userId: user._id }, 'failed to untrack session')
   })
+  // Note that the "*" must be in double quotes
+  // https://www.w3.org/TR/clear-site-data/#ref-for-grammardef-
+  res.set('Clear-Site-Data', '"*"')
   res.sendStatus(200)
 }
 
@@ -329,11 +333,22 @@ async function unsubscribe(req, res, next) {
   })
 }
 
+const refProviderSettingsSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    groups: z.array(z.object({ id: z.string() })).optional(),
+    disablePersonalLibrary: z.boolean().optional(),
+  })
+  .optional()
+
 const updateUserSettingsSchema = z.object({
   body: z
     .object({
       first_name: z.string().max(255).nullish(),
       last_name: z.string().max(255).nullish(),
+      zotero: refProviderSettingsSchema,
+      mendeley: refProviderSettingsSchema,
+      papers: refProviderSettingsSchema,
     })
     .passthrough(),
   // TODO: complete the schema and remove the passthrough
@@ -349,17 +364,17 @@ async function updateUserSettings(req, res, next) {
     throw new OError('problem updating user settings', { userId })
   }
 
-  if (body.first_name != null) {
-    user.first_name = body.first_name.trim()
+  if (typeof body.first_name === 'string') {
+    user.first_name = sanitizeControlCharacters(body.first_name).trim()
   }
-  if (body.last_name != null) {
-    user.last_name = body.last_name.trim()
+  if (typeof body.last_name === 'string') {
+    user.last_name = sanitizeControlCharacters(body.last_name).trim()
   }
-  if (body.role != null) {
-    user.role = body.role.trim()
+  if (typeof body.role === 'string') {
+    user.role = sanitizeControlCharacters(body.role).trim()
   }
-  if (body.institution != null) {
-    user.institution = body.institution.trim()
+  if (typeof body.institution === 'string') {
+    user.institution = sanitizeControlCharacters(body.institution).trim()
   }
   if (body.mode != null) {
     user.ace.mode = body.mode
@@ -394,6 +409,9 @@ async function updateUserSettings(req, res, next) {
   if (body.syntaxValidation != null) {
     user.ace.syntaxValidation = body.syntaxValidation
   }
+  if (body.previewTabs != null) {
+    user.ace.previewTabs = Boolean(body.previewTabs)
+  }
   if (body.fontFamily != null) {
     user.ace.fontFamily = body.fontFamily
   }
@@ -406,15 +424,30 @@ async function updateUserSettings(req, res, next) {
   if (body.breadcrumbs != null) {
     user.ace.breadcrumbs = Boolean(body.breadcrumbs)
   }
+  if (body.editorTabs != null) {
+    user.ace.editorTabs = Boolean(body.editorTabs)
+  }
+  if (body.nonBlinkingCursor != null) {
+    user.ace.nonBlinkingCursor = Boolean(body.nonBlinkingCursor)
+  }
   if (body.referencesSearchMode != null) {
     const mode = body.referencesSearchMode === 'simple' ? 'simple' : 'advanced'
     user.ace.referencesSearchMode = mode
   }
-  if (body.enableNewEditor != null) {
-    user.ace.enableNewEditorStageFour = Boolean(body.enableNewEditor)
-  }
   if (body.darkModePdf != null) {
     user.ace.darkModePdf = Boolean(body.darkModePdf)
+  }
+  if (body.floatingMenu != null) {
+    user.ace.floatingMenu = Boolean(body.floatingMenu)
+  }
+  if (body.zotero != null) {
+    user.ace.zotero = { ...user.ace.zotero, ...body.zotero }
+  }
+  if (body.mendeley != null) {
+    user.ace.mendeley = { ...user.ace.mendeley, ...body.mendeley }
+  }
+  if (body.papers != null) {
+    user.ace.papers = { ...user.ace.papers, ...body.papers }
   }
   await user.save()
 
