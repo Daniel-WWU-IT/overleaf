@@ -1,7 +1,12 @@
 # Local development deployment
 This is a guide on how to run a local deployment of Overleaf integrated into a Nextcloud instance.
 
-For this to work, you need to also clone the [overleaf-nextcloud](https://github.com/Daniel-WWU-IT/overleaf-nextcloud) repository next to this one, so that both repositories are located in the same base directory.
+For this to work, you need to also clone the [overleaf-nextcloud](https://github.com/Daniel-WWU-IT/overleaf-nextcloud) repository next to this one, so that both repositories are located in the same base directory:
+```
+<common base directory>
+  |- overleaf
+  |- overleaf-nextcloud
+```
 
 ## Prerequisites
 Unfortunately, running a local instance of Overleaf+Nextcloud Integration is no easy feat, mainly due to browser security restrictions. There are a few steps that must be taken on the local system before being able to run the provided setup:
