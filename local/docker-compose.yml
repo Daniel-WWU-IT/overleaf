@@ -2,7 +2,7 @@
 services:
     sharelatex:
         restart: always
-        image: sharelatex/sharelatex:v6-beta
+        image: sharelatex/sharelatex:${OVERLEAF_BRANCH_NAME}
         container_name: sharelatex
         depends_on:
             mongo:
