@@ -7,7 +7,11 @@ GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 run: build start
 
 build:
+	@echo "Building Overleaf..."
 	cd ./server-ce && make build-base build-community
+
+	@echo "Building Overleaf Integration App..."
+	cd ../overleaf-nextcloud && npm i && npm run build
 
 start:
 	OVERLEAF_BRANCH_NAME=$(GIT_BRANCH) docker compose -f ./local/docker-compose.yml up --no-attach mongo --no-attach redis --no-attach nextcloud --no-attach proxy
