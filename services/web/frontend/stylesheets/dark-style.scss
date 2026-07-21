@@ -1,7 +1,30 @@
-// Overrides for an overall dark style
+// Overrides for a proper dark style
+
+// Welcome page (make it always dark, as it is not themed correctly)
+body:has(div.welcome) {
+  .navbar-default, .navbar-light {
+    @include navbar-dark;
+  }
+
+  #project-list-root {
+    --bs-heading-color: var(--content-primary-dark);
+    color: var(--content-primary-dark);
+  }
+
+  #project-list-root > .project-list-react.content {
+    background-color: var(--bg-dark-secondary);
+  }
+
+  footer.site-footer {
+    background-color: var(--bg-dark-primary);
+    border-top: 1px solid var(--bg-dark-primary);
+  }
+};
 
 // Footer
-footer.site-footer {
-  background-color: var(--bg-dark-primary);
-  border-top: 1px solid var(--bg-dark-primary);
+@include theme('default') {
+  footer.site-footer {
+    background-color: var(--bg-dark-primary);
+    border-top: 1px solid var(--bg-dark-primary);
+  }
 }
