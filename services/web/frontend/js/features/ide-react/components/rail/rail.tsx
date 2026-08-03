@@ -1,4 +1,4 @@
-import { FC, RefObject, useCallback, useEffect, useMemo, useRef } from 'react'
+import { FC, RefObject, useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Nav, TabContainer } from 'react-bootstrap'
 import { useLayoutContext } from '@/shared/context/layout-context'
@@ -6,20 +6,18 @@ import {
   RailTabKey,
   useRailContext,
 } from '@/features/ide-react/context/rail-context'
-import FileTreeOutlinePanel from '@/features/ide-redesign/components/file-tree/file-tree-outline-panel'
-import {
-  ChatIndicator,
-  ChatPane,
-} from '@/features/ide-redesign/components/chat/chat'
+import FileTreeOutlinePanel from '@/features/file-tree/components/file-tree-outline-panel'
+import ChatPane from '@/features/chat/components/chat-pane'
+import ChatIndicator from '@/features/chat/components/chat-indicator'
 import getMeta from '@/utils/meta'
 import classNames from 'classnames'
-import IntegrationsPanel from '@/features/ide-redesign/components/integrations-panel/integrations-panel'
+import IntegrationsPanel from '@/features/integrations-panel/integrations-panel'
 import { useChatContext } from '@/features/chat/context/chat-context'
 import { useEditorAnalytics } from '@/shared/hooks/use-editor-analytics'
 import {
   FullProjectSearchPanel,
   hasFullProjectSearch,
-} from '@/features/ide-redesign/components/full-project-search-panel'
+} from '@/features/ide-react/components/rail/full-project-search-panel'
 import { sendSearchEvent } from '@/features/event-tracking/search-events'
 import { useProjectContext } from '@/shared/context/project-context'
 import { useCommandProvider } from '@/features/ide-react/hooks/use-command-provider'
@@ -31,11 +29,8 @@ import RailPanel from './rail-panel'
 import RailResizeHandle from './rail-resize-handle'
 import RailModals from './rail-modals'
 import RailOverflowDropdown from './rail-overflow-dropdown'
-import useRailOverflow from '@/features/ide-redesign/hooks/use-rail-overflow'
-import EditorTourRailTooltip from '@/features/ide-redesign/components/editor-tour/editor-tour-rail-tooltip'
+import useRailOverflow from '@/features/ide-react/hooks/use-rail-overflow'
 import importOverleafModules from '../../../../../macros/import-overleaf-module.macro'
-import EditorTourThemeTooltip from '@/features/ide-redesign/components/editor-tour/editor-tour-theme-tooltip'
-import EditorTourGotQuestionsTooltip from '@/features/ide-redesign/components/editor-tour/editor-tour-got-questions'
 import { shouldIncludeElement } from '@/features/ide-react/util/rail-utils'
 import { useEditorContext } from '@/shared/context/editor-context'
 import useEventListener from '@/shared/hooks/use-event-listener'
@@ -61,6 +56,13 @@ const moduleRailPopovers = (
   }[]
 ).map(({ import: { default: element } }) => element)
 
+const moduleRailActions = (
+  importOverleafModules('railActions') as {
+    import: { default: RailAction }
+    path: string
+  }[]
+).map(({ import: { default: action } }) => action)
+
 export const RailLayout = () => {
   const { sendEvent } = useEditorAnalytics()
   const { t } = useTranslation()
@@ -71,14 +73,11 @@ export const RailLayout = () => {
   const gitBridgeEnabled = getMeta('ol-gitBridgeEnabled')
   const { isOverleaf } = getMeta('ol-ExposedSettings')
 
-  const { view, setLeftMenuShown } = useLayoutContext()
+  const { view, setSettingsShown, focusMode } = useLayoutContext()
 
   const { markMessagesAsRead } = useChatContext()
 
   const isHistoryView = view === 'history'
-
-  const fileTreeRef = useRef<HTMLButtonElement>(null)
-  const settingsRef = useRef<HTMLButtonElement>(null)
 
   useEventListener(
     'ui:select-rail-tab',
@@ -107,7 +106,6 @@ export const RailLayout = () => {
         // NOTE: We always need to mount the file tree on first load
         // since it is responsible for opening the initial document.
         mountOnFirstLoad: true,
-        ref: fileTreeRef,
       },
       {
         key: 'full-project-search',
@@ -161,18 +159,18 @@ export const RailLayout = () => {
         title: t('help'),
         dropdown: <RailHelpDropdown />,
       },
+      ...moduleRailActions,
       {
         key: 'settings',
         icon: 'settings',
         title: t('settings'),
         action: () => {
           sendEvent('rail-click', { tab: 'settings' })
-          setLeftMenuShown(true)
+          setSettingsShown(true)
         },
-        ref: settingsRef,
       },
     ],
-    [setLeftMenuShown, t, sendEvent]
+    [setSettingsShown, t, sendEvent]
   )
 
   useCommandProvider(
@@ -180,12 +178,13 @@ export const RailLayout = () => {
       {
         id: 'open-settings',
         handler: () => {
-          setLeftMenuShown(true)
+          setSettingsShown(true)
         },
-        label: t('settings'),
+        menuLabel: t('settings'),
+        label: t('open_settings'),
       },
     ],
-    [t, setLeftMenuShown]
+    [t, setSettingsShown]
   )
 
   const onTabSelect = useCallback(
@@ -272,7 +271,9 @@ export const RailLayout = () => {
           But it should be identified as a navigation landmark.
           Therefore, we nest them: the parent <nav> is the landmark, and its child gets the "role="tablist"". */}
       <nav
-        className={classNames('ide-rail', { hidden: isHistoryView })}
+        className={classNames('ide-rail', {
+          hidden: isHistoryView || focusMode,
+        })}
         aria-label={t('sidebar')}
       >
         <Nav activeKey={selectedTab} className="ide-rail-tabs-nav">
@@ -307,20 +308,20 @@ export const RailLayout = () => {
           </nav>
         </Nav>
       </nav>
-      <EditorTourRailTooltip target={fileTreeRef.current} />
-      <EditorTourThemeTooltip target={settingsRef.current} />
-      <EditorTourGotQuestionsTooltip target={settingsRef.current} />
-      {moduleRailPopovers
-        .filter(shouldIncludeElement)
-        .map(({ key, Component, ref }) => (
-          <Component key={key} ref={ref} />
-        ))}
+      {!focusMode &&
+        moduleRailPopovers
+          .filter(shouldIncludeElement)
+          .map(({ key, Component, ref }) => <Component key={key} ref={ref} />)}
       <RailPanel
         isReviewPanelOpen={isReviewPanelOpen}
         isHistoryView={isHistoryView}
         railTabs={railTabs}
+        focusMode={focusMode}
       />
-      <RailResizeHandle isReviewPanelOpen={isReviewPanelOpen} />
+      <RailResizeHandle
+        isReviewPanelOpen={isReviewPanelOpen}
+        focusMode={focusMode}
+      />
       <RailModals />
     </TabContainer>
   )

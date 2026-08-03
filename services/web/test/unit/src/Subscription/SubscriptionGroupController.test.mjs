@@ -28,6 +28,7 @@ describe('SubscriptionGroupController', function () {
       teamName: 'Cool group',
       groupPlan: true,
       membersLimit: 5,
+      planCode: 'group_collaborator_10',
     }
 
     ctx.plan = {
@@ -211,6 +212,10 @@ describe('SubscriptionGroupController', function () {
       '../../../../app/src/models/Subscription',
       () => ctx.SubscriptionModel
     )
+
+    vi.doMock('@overleaf/settings', () => ({
+      default: { adminUrl: 'https://admin.overleaf.com' },
+    }))
 
     vi.doMock('@overleaf/logger', () => ({
       default: {
@@ -786,6 +791,12 @@ describe('SubscriptionGroupController', function () {
                   '\n' +
                   `**Estimated Number of Users:** ${adding}\n` +
                   '\n' +
+                  `**Subscription:** [${ctx.subscriptionId}](https://admin.overleaf.com/admin/subscription/${ctx.subscriptionId})\n` +
+                  '\n' +
+                  `**Current Number of Seats:** ${ctx.subscription.membersLimit}\n` +
+                  '\n' +
+                  `**Plan Code:** ${ctx.subscription.planCode}\n` +
+                  '\n' +
                   `**PO Number:** ${poNumber}\n` +
                   '\n' +
                   `**Message:** This email has been generated on behalf of user with email **${ctx.user.email}** to request an increase in the total number of users for their subscription.`,
@@ -794,6 +805,27 @@ describe('SubscriptionGroupController', function () {
               .should.equal(true)
             sinon.assert.calledOnce(ctx.Modules.promises.hooks.fire)
             code.should.equal(204)
+            resolve()
+          },
+        }
+        ctx.Controller.submitForm(ctx.req, res, resolve)
+      })
+    })
+
+    it('should include the Salesforce ID line when the subscription has a salesforce_id', async function (ctx) {
+      await new Promise(resolve => {
+        const adding = 100
+        const salesforceId = '0061x000ABCDEFG'
+        ctx.subscription.salesforce_id = salesforceId
+        ctx.req.body = { adding }
+
+        const res = {
+          sendStatus: () => {
+            const { message } =
+              ctx.Modules.promises.hooks.fire.getCall(0).args[1]
+            message.should.include(
+              `**Salesforce ID:** [${salesforceId}](https://digitalscience.lightning.force.com/lightning/r/Opportunity/${salesforceId}/view)\n`
+            )
             resolve()
           },
         }

@@ -1,4 +1,4 @@
-import type { Meta } from '@storybook/react'
+import type { Meta } from '@storybook/react-webpack5'
 import _ from 'lodash'
 import { SplitTestContext } from '@/shared/context/split-test-context'
 

@@ -3,12 +3,12 @@
 Migrations for the app environment live in this folder, and use the [East](https://github.com/okv/east) migration
 framework.
 
-We have a npm script which wraps east: `npm run migrations -- ...`
+We have a yarn script which wraps east: `yarn run migrations -- ...`
 
 For example:
 
 ```shell
-npm run migrations -- list -t 'server-ce'
+yarn run migrations -- list -t 'server-ce'
 ```
 
 For SAAS, use the rake tasks for staging/production
@@ -36,7 +36,7 @@ Our adapter will refuse to run if this flag is not set.
 To create a new migration, run:
 
 ```shell
-npm run migrations -- create <migration name>
+yarn run migrations -- create <migration name>
 ```
 
 This command will create a new migration file in the migrations folder, based on a template. The template provides
@@ -54,7 +54,7 @@ through the migrations' mechanism.
 To run all migrations in a server-ce environment:
 
 ```shell
-npm run migrations -- migrate -t 'server-ce'
+yarn run migrations -- migrate -t 'server-ce'
 # Note: They are run by default on container start.
 ```
 

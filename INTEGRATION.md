@@ -89,3 +89,6 @@ The `regsvc` service can be configured by setting various environment variables:
 
 ### Local deployment
 The directory `local` contains files to run a local deployment alongside a Nextcloud. The `makefile` located in the project root directory can be used to build and run this deployment. Before using this, though, read the instructions in[`LOCAL_DEPLOYMENT.md`](local/LOCAL_DEPLOYMENT.md) carefully, as it will _not_ work out-of-the-box!
+
+### Changelog
+A changelog can be found [in the Overleaf Integration App repository](https://github.com/Daniel-WWU-IT/overleaf-nextcloud/blob/v6/CHANGELOG.md).

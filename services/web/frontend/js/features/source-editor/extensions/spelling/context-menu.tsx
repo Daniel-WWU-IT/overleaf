@@ -45,6 +45,11 @@ const handleClickEvent = (event: MouseEvent, view: EditorView) => {
  * and show a menu of suggestions
  */
 const handleContextMenuEvent = (event: MouseEvent, view: EditorView) => {
+  if (event.shiftKey) {
+    view.dispatch({ effects: closeAllContextMenusEffect.of(null) })
+    return
+  }
+
   const position = view.posAtCoords(
     {
       x: event.pageX,

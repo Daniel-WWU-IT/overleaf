@@ -2,6 +2,8 @@ import mongodb from 'mongodb-legacy'
 
 import _ from 'lodash'
 import Settings from '@overleaf/settings'
+import OError from '@overleaf/o-error'
+import SplitTestHandler from '../SplitTests/SplitTestHandler.mjs'
 
 const { ObjectId } = mongodb
 
@@ -90,7 +92,7 @@ function ensureNameIsUnique(nameList, name, suffixes, maxLength) {
   if (uniqueName != null) {
     return uniqueName
   } else {
-    throw new Error(`Failed to generate a unique name for: ${name}`)
+    throw new OError('Failed to generate a unique name', { name })
   }
 }
 
@@ -147,25 +149,43 @@ function _addNumericSuffixToProjectName(name, allProjectNames, maxLength) {
   return null
 }
 
-function _imageAllowed(user, image) {
-  if (image.alphaOnly) {
-    return Boolean(user?.alphaProgram)
+async function _monthlyExperimentalImageAllowed(req, res) {
+  return await SplitTestHandler.promises.featureFlagEnabled(
+    req,
+    res,
+    'monthly-texlive'
+  )
+}
+
+function _imageAllowed(
+  image,
+  alphaImagesAllowed,
+  monthlyExperimentalImagesAllowed
+) {
+  if (image.alphaOnly && !alphaImagesAllowed) {
+    return false
   }
-  if (image.monthlyExperimental) {
-    return Boolean(
-      user?.labsProgram && user.labsExperiments.includes('monthly-texlive')
-    )
+  if (image.monthlyExperimental && !monthlyExperimentalImagesAllowed) {
+    return false
   }
   return true
 }
 
-function getAllowedImagesForUser(user) {
+async function getAllowedImagesForUser(req, res, user) {
   let images = Settings.allowedImageNames || []
+
+  const alphaImagesAllowed = Boolean(user?.alphaProgram)
+  const monthlyExperimentalImagesAllowed =
+    await _monthlyExperimentalImageAllowed(req, res)
 
   images = images.map(image => {
     return {
       ...image,
-      allowed: _imageAllowed(user, image),
+      allowed: _imageAllowed(
+        image,
+        alphaImagesAllowed,
+        monthlyExperimentalImagesAllowed
+      ),
       rolling: image.monthlyExperimental,
     }
   })

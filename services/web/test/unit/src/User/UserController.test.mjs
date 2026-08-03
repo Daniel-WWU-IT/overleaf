@@ -243,6 +243,7 @@ describe('UserController', function () {
       status: sinon.stub(),
       sendStatus: sinon.stub(),
       json: sinon.stub(),
+      set: sinon.stub(),
     }
     ctx.res.status.returns(ctx.res)
     ctx.next = sinon.stub()
@@ -264,6 +265,16 @@ describe('UserController', function () {
       return new Promise(resolve => {
         ctx.res.sendStatus = code => {
           code.should.equal(200)
+          resolve()
+        }
+        ctx.UserController.tryDeleteUser(ctx.req, ctx.res, ctx.next)
+      })
+    })
+
+    it('should set the Clear-Site-Data header', function (ctx) {
+      return new Promise(resolve => {
+        ctx.res.sendStatus = code => {
+          expect(ctx.res.set).to.have.been.calledWith('Clear-Site-Data', '"*"')
           resolve()
         }
         ctx.UserController.tryDeleteUser(ctx.req, ctx.res, ctx.next)
@@ -532,39 +543,6 @@ describe('UserController', function () {
       })
     })
 
-    it('should set enableNewEditorStageFour to true', function (ctx) {
-      return new Promise(resolve => {
-        ctx.req.body = { enableNewEditor: true }
-        ctx.res.sendStatus = code => {
-          ctx.user.ace.enableNewEditorStageFour.should.equal(true)
-          resolve()
-        }
-        ctx.UserController.updateUserSettings(ctx.req, ctx.res)
-      })
-    })
-
-    it('should set enableNewEditorStageFour to false', function (ctx) {
-      return new Promise(resolve => {
-        ctx.req.body = { enableNewEditor: false }
-        ctx.res.sendStatus = code => {
-          ctx.user.ace.enableNewEditorStageFour.should.equal(false)
-          resolve()
-        }
-        ctx.UserController.updateUserSettings(ctx.req, ctx.res)
-      })
-    })
-
-    it('should keep enableNewEditorStageFour a boolean', function (ctx) {
-      return new Promise(resolve => {
-        ctx.req.body = { enableNewEditor: 'foobar' }
-        ctx.res.sendStatus = code => {
-          ctx.user.ace.enableNewEditorStageFour.should.equal(true)
-          resolve()
-        }
-        ctx.UserController.updateUserSettings(ctx.req, ctx.res)
-      })
-    })
-
     it('should set darkModePdf to true', function (ctx) {
       return new Promise(resolve => {
         ctx.req.body = { darkModePdf: true }
@@ -592,6 +570,126 @@ describe('UserController', function () {
         ctx.req.body = { darkModePdf: 'foobar' }
         ctx.res.sendStatus = code => {
           ctx.user.ace.darkModePdf.should.equal(true)
+          resolve()
+        }
+        ctx.UserController.updateUserSettings(ctx.req, ctx.res)
+      })
+    })
+
+    it('should set zotero settings object', function (ctx) {
+      return new Promise(resolve => {
+        ctx.req.body = {
+          zotero: {
+            enabled: false,
+            groups: [{ id: '123' }],
+            disablePersonalLibrary: true,
+          },
+        }
+        ctx.res.sendStatus = code => {
+          ctx.user.ace.zotero.enabled.should.equal(false)
+          ctx.user.ace.zotero.groups.should.deep.equal([{ id: '123' }])
+          ctx.user.ace.zotero.disablePersonalLibrary.should.equal(true)
+          resolve()
+        }
+        ctx.UserController.updateUserSettings(ctx.req, ctx.res)
+      })
+    })
+
+    it('should set zotero settings with partial update', function (ctx) {
+      return new Promise(resolve => {
+        ctx.user.ace.zotero = {
+          enabled: true,
+          groups: [{ id: 'existing' }],
+          disablePersonalLibrary: false,
+        }
+        ctx.req.body = {
+          zotero: { enabled: false },
+        }
+        ctx.res.sendStatus = code => {
+          ctx.user.ace.zotero.enabled.should.equal(false)
+          resolve()
+        }
+        ctx.UserController.updateUserSettings(ctx.req, ctx.res)
+      })
+    })
+
+    it('should set mendeley settings object', function (ctx) {
+      return new Promise(resolve => {
+        ctx.req.body = {
+          mendeley: {
+            enabled: false,
+            groups: [{ id: 'group-456' }],
+            disablePersonalLibrary: true,
+          },
+        }
+        ctx.res.sendStatus = code => {
+          ctx.user.ace.mendeley.enabled.should.equal(false)
+          ctx.user.ace.mendeley.groups.should.deep.equal([{ id: 'group-456' }])
+          ctx.user.ace.mendeley.disablePersonalLibrary.should.equal(true)
+          resolve()
+        }
+        ctx.UserController.updateUserSettings(ctx.req, ctx.res)
+      })
+    })
+
+    it('should set mendeley with multiple groups', function (ctx) {
+      return new Promise(resolve => {
+        ctx.req.body = {
+          mendeley: {
+            enabled: true,
+            groups: [{ id: 'group-1' }, { id: 'group-2' }, { id: 'group-3' }],
+            disablePersonalLibrary: false,
+          },
+        }
+        ctx.res.sendStatus = code => {
+          ctx.user.ace.mendeley.groups.should.have.length(3)
+          ctx.user.ace.mendeley.groups[0].id.should.equal('group-1')
+          ctx.user.ace.mendeley.groups[1].id.should.equal('group-2')
+          ctx.user.ace.mendeley.groups[2].id.should.equal('group-3')
+          resolve()
+        }
+        ctx.UserController.updateUserSettings(ctx.req, ctx.res)
+      })
+    })
+
+    it('should set papers settings object', function (ctx) {
+      return new Promise(resolve => {
+        ctx.req.body = {
+          papers: {
+            enabled: true,
+            groups: [],
+            disablePersonalLibrary: false,
+          },
+        }
+        ctx.res.sendStatus = code => {
+          ctx.user.ace.papers.enabled.should.equal(true)
+          ctx.user.ace.papers.groups.should.deep.equal([])
+          ctx.user.ace.papers.disablePersonalLibrary.should.equal(false)
+          resolve()
+        }
+        ctx.UserController.updateUserSettings(ctx.req, ctx.res)
+      })
+    })
+
+    it('should allow setting only papers disablePersonalLibrary', function (ctx) {
+      return new Promise(resolve => {
+        ctx.req.body = {
+          papers: { disablePersonalLibrary: true },
+        }
+        ctx.res.sendStatus = code => {
+          ctx.user.ace.papers.disablePersonalLibrary.should.equal(true)
+          resolve()
+        }
+        ctx.UserController.updateUserSettings(ctx.req, ctx.res)
+      })
+    })
+
+    it('should handle undefined mendeley by not setting it', function (ctx) {
+      return new Promise(resolve => {
+        ctx.user.ace.mendeley = { enabled: true, groups: [] }
+        ctx.req.body = { mendeley: undefined }
+        ctx.res.sendStatus = code => {
+          ctx.user.ace.mendeley.enabled.should.equal(true)
           resolve()
         }
         ctx.UserController.updateUserSettings(ctx.req, ctx.res)

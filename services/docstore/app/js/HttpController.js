@@ -5,6 +5,17 @@ import HealthChecker from './HealthChecker.js'
 import Errors from './Errors.js'
 import Settings from '@overleaf/settings'
 import { expressify } from '@overleaf/promise-utils'
+import { parseReq, z } from '@overleaf/validation-tools'
+
+const patchDocSchema = z.object({
+  body: z
+    .object({
+      deleted: z.literal(true),
+      deletedAt: z.coerce.date(),
+      name: z.string(),
+    })
+    .strict(),
+})
 
 async function getDoc(req, res) {
   const { doc_id: docId, project_id: projectId } = req.params
@@ -22,7 +33,14 @@ async function getDoc(req, res) {
 async function peekDoc(req, res) {
   const { doc_id: docId, project_id: projectId } = req.params
   logger.debug({ projectId, docId }, 'peeking doc')
-  const doc = await DocManager.peekDoc(projectId, docId)
+  const doc = await DocManager.peekDoc(projectId, docId, {
+    deleted: true,
+    inS3: true,
+    lines: true,
+    ranges: true,
+    rev: 1,
+    version: true,
+  })
   res.setHeader('x-doc-status', doc.inS3 ? 'archived' : 'active')
   res.json(_buildDocView(doc))
 }
@@ -56,6 +74,30 @@ async function getAllDocs(req, res) {
     }
   }
   res.json(docViews)
+}
+
+async function getAllDocsWithRanges(req, res) {
+  const { project_id: projectId } = req.params
+  logger.debug({ projectId }, 'getting all docs with ranges')
+  const docs = await DocManager.getAllNonDeletedDocs(projectId, {
+    lines: true,
+    rev: true,
+    ranges: true,
+  })
+  const docViews = _buildDocsArrayView(projectId, docs)
+  for (const docView of docViews) {
+    if (!docView.lines) {
+      logger.warn({ projectId, docId: docView._id }, 'missing doc lines')
+      docView.lines = []
+    }
+  }
+  res.json(docViews)
+}
+
+async function getAllDocVersions(req, res) {
+  const { project_id: projectId } = req.params
+  const docs = await DocManager.getAllDocVersions(projectId)
+  res.json(docs)
 }
 
 async function getAllDeletedDocs(req, res) {
@@ -97,7 +139,11 @@ async function getTrackedChangesUserIds(req, res) {
 
 async function projectHasRanges(req, res) {
   const { project_id: projectId } = req.params
-  const projectHasRanges = await DocManager.projectHasRanges(projectId)
+  const useSecondary = req.query.useSecondary === 'true'
+  const projectHasRanges = await DocManager.projectHasRanges(
+    projectId,
+    useSecondary
+  )
   res.json({ projectHasRanges })
 }
 
@@ -147,18 +193,9 @@ async function updateDoc(req, res) {
 }
 
 async function patchDoc(req, res) {
+  const { body: meta } = parseReq(req, patchDocSchema)
   const { doc_id: docId, project_id: projectId } = req.params
   logger.debug({ projectId, docId }, 'patching doc')
-
-  const allowedFields = ['deleted', 'deletedAt', 'name']
-  const meta = {}
-  Object.entries(req.body).forEach(([field, value]) => {
-    if (allowedFields.includes(field)) {
-      meta[field] = value
-    } else {
-      logger.fatal({ field }, 'joi validation for pathDoc is broken')
-    }
-  })
   await DocManager.patchDoc(projectId, docId, meta)
   res.sendStatus(204)
 }
@@ -242,8 +279,10 @@ export default {
   isDocDeleted: expressify(isDocDeleted),
   getRawDoc: expressify(getRawDoc),
   getAllDocs: expressify(getAllDocs),
+  getAllDocsWithRanges: expressify(getAllDocsWithRanges),
   getAllDeletedDocs: expressify(getAllDeletedDocs),
   getAllRanges: expressify(getAllRanges),
+  getAllDocVersions: expressify(getAllDocVersions),
   getTrackedChangesUserIds: expressify(getTrackedChangesUserIds),
   getCommentThreadIds: expressify(getCommentThreadIds),
   projectHasRanges: expressify(projectHasRanges),

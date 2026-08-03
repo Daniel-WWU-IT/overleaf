@@ -4,6 +4,7 @@ import { sendMB } from '../../../infrastructure/event-tracking'
 import { useTranslation } from 'react-i18next'
 import { useEditorOpenDocContext } from '@/features/ide-react/context/editor-open-doc-context'
 import { useEditorPropertiesContext } from '@/features/ide-react/context/editor-properties-context'
+import { getFileExtension } from '../utils/file'
 import { isVisualEditorAvailable } from '../utils/visual-editor'
 
 function EditorSwitch() {
@@ -16,6 +17,7 @@ function EditorSwitch() {
   const richTextAvailable = openDocName
     ? isVisualEditorAvailable(openDocName)
     : false
+  const extension = getFileExtension(openDocName || '') ?? ''
 
   const handleChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -31,9 +33,9 @@ function EditorSwitch() {
           break
       }
 
-      sendMB('editor-switch-change', { editorType })
+      sendMB('editor-switch-change', { editorType, extension })
     },
-    [setVisual]
+    [extension, setVisual]
   )
 
   return (
@@ -55,7 +57,7 @@ function EditorSwitch() {
             onChange={handleChange}
           />
           <label htmlFor={inputId} className="toggle-switch-label">
-            <span>{t('code_editor')}</span>
+            <span>{t('code')}</span>
           </label>
 
           <RichTextToggle
@@ -90,7 +92,7 @@ const RichTextToggle: FC<{
         disabled={disabled}
       />
       <label htmlFor={inputId} className="toggle-switch-label">
-        <span>{t('visual_editor')}</span>
+        <span>{t('visual')}</span>
       </label>
     </span>
   )
@@ -98,7 +100,7 @@ const RichTextToggle: FC<{
   if (disabled) {
     return (
       <OLTooltip
-        description={t('visual_editor_is_only_available_for_tex_files')}
+        description={t('visual_editor_does_not_support_this_file_type')}
         id="rich-text-toggle-tooltip"
         overlayProps={{ placement: 'bottom' }}
         tooltipProps={{ className: 'tooltip-wide' }}

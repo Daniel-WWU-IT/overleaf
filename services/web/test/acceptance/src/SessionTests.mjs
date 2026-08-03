@@ -2,7 +2,10 @@ import { expect } from 'chai'
 import { setTimeout } from 'node:timers/promises'
 import UserHelper from './helpers/User.mjs'
 import redis from './helpers/redis.mjs'
+import Metrics from './helpers/metrics.mjs'
 import UserSessionsRedis from '../../../app/src/Features/User/UserSessionsRedis.mjs'
+import UserAnalyticsDataCache from '../../../app/src/Features/Analytics/UserAnalyticsDataCache.mjs'
+import Features from '../../../app/src/infrastructure/Features.mjs'
 
 const rclient = UserSessionsRedis.client()
 
@@ -354,6 +357,75 @@ describe('Sessions', function () {
       expect(token1).to.equal(token2)
 
       await checkSessionIsValid(user)
+    })
+  })
+
+  describe('analyticsIdMiddleware', function () {
+    async function getCacheMetric() {
+      const hit = await Metrics.promises.getMetric(
+        s => s.includes('analyticsIdMiddleware') && s.includes('hit')
+      )
+      const miss = await Metrics.promises.getMetric(
+        s => s.includes('analyticsIdMiddleware') && s.includes('miss')
+      )
+      return { hit, miss }
+    }
+    let usersAnalyticsId
+    beforeEach(function () {
+      if (!Features.hasFeature('saas')) {
+        this.skip()
+      }
+      usersAnalyticsId = this.user1.analyticsId
+      expect(usersAnalyticsId).to.match(/^[0-9a-f-]{36}$/)
+    })
+
+    it('should resolve to the users analyticsId', async function () {
+      await this.user1.login()
+      const session = await this.user1.getSession()
+      expect(session.analyticsId).to.equal(usersAnalyticsId)
+    })
+
+    it('should not lookup the users analyticsId after login', async function () {
+      const prev = await getCacheMetric()
+      await this.user1.login()
+      for (let i = 0; i < 5; i++) {
+        await this.user1.doRequest('GET', '/project')
+      }
+      const current = await getCacheMetric()
+      expect(current).to.deep.equal(prev)
+      const session = await this.user1.getSession()
+      expect(session.analyticsId).to.equal(usersAnalyticsId)
+    })
+
+    it('should lookup the users analyticsId for old session', async function () {
+      usersAnalyticsId = this.user1._id
+      await this.user1.mongoUpdate({
+        $set: { analyticsId: usersAnalyticsId },
+      })
+      const prev = await getCacheMetric()
+      await this.user1.login()
+      let session = await this.user1.getSession()
+      await this.user1.setInSession({
+        analyticsId: null,
+        passport: {
+          ...session.passport,
+          user: {
+            ...session.passport.user,
+            analyticsId: null,
+          },
+        },
+      })
+      await UserAnalyticsDataCache.reset()
+      for (let i = 0; i < 5; i++) {
+        await this.user1.doRequest('GET', '/project')
+      }
+      const current = await getCacheMetric()
+      expect(current).to.deep.equal({
+        hit: prev.hit,
+        miss: prev.miss + 1,
+      })
+      session = await this.user1.getSession()
+      expect(session.analyticsId).to.equal(usersAnalyticsId)
     })
   })
 })

@@ -47,13 +47,31 @@
 }
 
 :root {
+  --notification-ai-paywall-background: var(--bg-info-03);
+  --notification-ai-paywall-color: var(--content-primary);
+  --notification-ai-paywall-border-color: var(--blue-60);
+
   @include light-notification;
 
+  // Until we roll out dark mode notifications, make sure we show buttons in
+  // light mode even when the rest of the page is in dark mode
+  .ide-redesign-main .notification .btn {
+    @include light-buttons;
+  }
+
   @include theme('default') {
+    --notification-ai-paywall-background: var(--bg-dark-secondary);
+    --notification-ai-paywall-color: var(--content-primary-dark);
+    --notification-ai-paywall-border-color: var(--blue-30);
+
     .project-ds-nav-page {
       .notification {
         @include dark-notification;
         @include dark-bg;
+
+        .btn {
+          @include dark-buttons;
+        }
       }
     }
   }
@@ -151,7 +169,12 @@
   .notification-content {
     flex-grow: 1;
     padding: $spacing-06 0;
+    text-align: left;
     width: 100%;
+  }
+
+  &.text-center .notification-content {
+    text-align: center;
   }
 
   .notification-cta {
@@ -280,10 +303,6 @@
   display: flex;
   width: 100%;
 
-  .fa-warning {
-    margin-right: $spacing-05;
-  }
-
   .btn-reconfirm {
     float: right;
     margin-left: $spacing-05;
@@ -316,10 +335,6 @@
         .reconfirm-notification {
           background-color: var(--notification-reconfirmation-bg);
           border-radius: $border-radius-base;
-
-          .fa-warning {
-            color: var(--notification-icon-warning);
-          }
         }
       }
     }
@@ -329,4 +344,12 @@
 // Only apply bottom margin to form messages when it is non-empty
 .form-messages-bottom-margin > :last-child {
   margin-bottom: var(--spacing-06);
+}
+
+.ai-paywall-notification {
+  // Override notification styles. !important is needed so that it binds
+  // stronger than the notification variant styles.
+  border: 2px solid var(--notification-ai-paywall-border-color) !important;
+  background-color: var(--notification-ai-paywall-background) !important;
+  color: var(--notification-ai-paywall-color) !important;
 }

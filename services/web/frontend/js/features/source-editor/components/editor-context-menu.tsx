@@ -15,6 +15,8 @@ import { contextMenuStateField } from '../extensions/context-menu'
 import { useFeatureFlag } from '@/shared/context/split-test-context'
 import { useContextMenuItems } from '../hooks/use-context-menu-items'
 import DropdownListItem from '@/shared/components/dropdown/dropdown-list-item'
+import { EditorContextMenuFeedback } from './editor-context-menu-feedback'
+import { sendContextMenuEvent } from '../utils/context-menu-analytics'
 
 const EditorContextMenu: FC = () => {
   const state = useCodeMirrorStateContext()
@@ -39,46 +41,52 @@ const EditorContextMenuContent: FC = memo(function EditorContextMenuContent() {
   const menuRef = useRef<any>(null)
 
   useEffect(() => {
+    sendContextMenuEvent('menu-expand', {
+      location: 'editor-context-menu',
+    })
     menuRef.current?.focus()
   }, [])
 
   return (
     <Dropdown show onToggle={onToggle}>
-      <DropdownMenu
-        ref={menuRef}
-        show
-        tabIndex={0}
-        className="dropdown-menu-unpositioned"
-        onKeyDown={event => {
-          switch (event.code) {
-            case 'Escape':
-            case 'Tab':
-              event.preventDefault()
-              closeMenu()
-              break
-          }
-        }}
-      >
-        {menuItems.map((menuItem, index) => (
-          <Fragment key={index}>
-            {menuItem.separatorAbove && <DropdownDivider />}
-            <DropdownListItem>
-              <DropdownItem
-                as="button"
-                onClick={() => menuItem.handler()}
-                disabled={menuItem.disabled}
-                trailingIcon={
-                  menuItem.shortcut ? (
-                    <span>{menuItem.shortcut}</span>
-                  ) : undefined
-                }
-              >
-                {menuItem.label}
-              </DropdownItem>
-            </DropdownListItem>
-          </Fragment>
-        ))}
-      </DropdownMenu>
+      <div onContextMenu={event => event.preventDefault()}>
+        <DropdownMenu
+          ref={menuRef}
+          show
+          tabIndex={0}
+          className="dropdown-menu-unpositioned"
+          onKeyDown={event => {
+            switch (event.code) {
+              case 'Escape':
+              case 'Tab':
+                event.preventDefault()
+                closeMenu()
+                break
+            }
+          }}
+        >
+          {menuItems.map((menuItem, index) => (
+            <Fragment key={index}>
+              {menuItem.separatorAbove && <DropdownDivider />}
+              <DropdownListItem>
+                <DropdownItem
+                  as="button"
+                  onClick={() => menuItem.handler()}
+                  disabled={menuItem.disabled}
+                  trailingIcon={
+                    menuItem.shortcut ? (
+                      <span>{menuItem.shortcut}</span>
+                    ) : undefined
+                  }
+                >
+                  {menuItem.label}
+                </DropdownItem>
+              </DropdownListItem>
+            </Fragment>
+          ))}
+          <EditorContextMenuFeedback />
+        </DropdownMenu>
+      </div>
     </Dropdown>
   )
 })

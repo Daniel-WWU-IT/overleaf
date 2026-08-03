@@ -39,6 +39,10 @@ const UserRegistrationHandler = {
     return user
   },
 
+  /**
+   * @param {Object} userDetails
+   * @return {Promise<{ _id: import('mongodb-legacy').ObjectId }>}
+   */
   async registerNewUser(userDetails) {
     const requestIsValid =
       UserRegistrationHandler._registrationRequestIsValid(userDetails)
@@ -96,6 +100,7 @@ const UserRegistrationHandler = {
       user = await UserRegistrationHandler.registerNewUser({
         email,
         password: crypto.randomBytes(32).toString('hex'),
+        analyticsId: crypto.randomUUID(),
       })
     } catch (error) {
       if (error.message === 'EmailAlreadyRegistered') {

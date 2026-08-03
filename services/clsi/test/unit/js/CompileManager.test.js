@@ -27,12 +27,12 @@ describe('CompileManager', () => {
       {
         path: 'output.log',
         type: 'log',
-        build: 1234,
+        build: '1234-5678',
       },
       {
         path: 'output.pdf',
         type: 'pdf',
-        build: 1234,
+        build: '1234-5678',
       },
     ]
     ctx.buildId = '00000000000-0000000000000000'

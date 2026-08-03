@@ -17,6 +17,7 @@ import Settings from '@overleaf/settings'
 import { MeteredStream } from '@overleaf/stream-utils'
 import OutputCacheManager from './OutputCacheManager.js'
 import ResourceWriter from './ResourceWriter.js'
+import OError from '@overleaf/o-error'
 
 const { CACHE_SUBDIR } = OutputCacheManager
 const { isExtraneousFile } = ResourceWriter
@@ -33,8 +34,8 @@ const MAX_ENTRIES_IN_OUTPUT_TAR = 100
 const MAX_BLG_FILES = 50
 const OBJECT_ID_REGEX = /^[0-9a-f]{24}$/
 
-const MIGRATE_FROM = new Date('2026-01-14').getTime()
-const MIGRATE_UNTIL = new Date('2026-01-21').getTime()
+const MIGRATE_FROM = Settings.apis.clsiCache.reshardFrom
+const MIGRATE_UNTIL = Settings.apis.clsiCache.reshardUntil
 
 /**
  * @param {string} projectId
@@ -54,8 +55,7 @@ function getAvailableShard(projectId) {
   const now = Date.now()
   if (
     now > MIGRATE_FROM &&
-    now < MIGRATE_UNTIL &&
-    (counter % 100) / 100 <
+    (counter % 100) / 100 >
       (MIGRATE_UNTIL - now) / (MIGRATE_UNTIL - MIGRATE_FROM)
   ) {
     shards = Settings.apis.clsiCache.shards.slice(
@@ -115,6 +115,7 @@ function closeCircuitBreaker(url) {
  * @param {Record<string, number>} opts.stats
  * @param {Record<string, number>} opts.timings
  * @param {Record<string, any>} opts.options
+ * @param {{path:string,method:string}} opts.metricsOpts
  * @return {string | undefined}
  */
 function notifyCLSICacheAboutBuild({
@@ -127,6 +128,7 @@ function notifyCLSICacheAboutBuild({
   stats,
   timings,
   options,
+  metricsOpts,
 }) {
   if (!Settings.apis.clsiCache.enabled) return undefined
   if (!OBJECT_ID_REGEX.test(projectId)) return undefined
@@ -186,32 +188,40 @@ function notifyCLSICacheAboutBuild({
       .catch(err => {
         tripCircuitBreaker(url)
         logger.warn(
-          { err, projectId, userId, buildId },
-          'enqueue for clsi cache failed'
+          { err, projectId, userId, buildId, shard },
+          'enqueue for clsi-cache failed'
         )
       })
   }
 
-  // PDF preview
-  enqueue(
-    outputFiles
-      .filter(
-        f =>
-          f.path === 'output.pdf' ||
-          f.path === 'output.log' ||
-          f.path === 'output.synctex.gz'
-      )
-      .concat(
-        outputFiles.filter(f => f.path.endsWith('.blg')).slice(0, MAX_BLG_FILES)
-      )
-      .map(f => {
-        const lean = { path: f.path }
-        if (f.path === 'output.pdf') {
-          Object.assign(lean, _.pick(f, 'path', 'size', 'contentId', 'ranges'))
-        }
-        return lean
-      })
-  )
+  const isUserCompile = !metricsOpts.path
+  if (!(isUserCompile && compileGroup === 'standard')) {
+    // PDF preview, skip for free compiles
+    enqueue(
+      outputFiles
+        .filter(
+          f =>
+            f.path === 'output.pdf' ||
+            f.path === 'output.log' ||
+            f.path === 'output.synctex.gz'
+        )
+        .concat(
+          outputFiles
+            .filter(f => f.path.endsWith('.blg'))
+            .slice(0, MAX_BLG_FILES)
+        )
+        .map(f => {
+          const lean = { path: f.path }
+          if (f.path === 'output.pdf') {
+            Object.assign(
+              lean,
+              _.pick(f, 'path', 'size', 'contentId', 'ranges')
+            )
+          }
+          return lean
+        })
+    )
+  }
 
   // Compile Cache
   buildTarball({ projectId, userId, buildId, outputFiles })
@@ -219,9 +229,22 @@ function notifyCLSICacheAboutBuild({
       enqueue([{ path: 'output.tar.gz' }])
     })
     .catch(err => {
+      if (isENOENT(err)) return
       logger.warn(
-        { err, projectId, userId, buildId },
-        'build output.tar.gz for clsi cache failed'
+        { err, projectId, userId, buildId, shard },
+        'build output.tar.gz for clsi-cache failed'
+      )
+    })
+
+  copyHistorySnapshot({ projectId, userId, buildId })
+    .then(() => {
+      enqueue([{ path: 'history-resync.json.gz' }])
+    })
+    .catch(err => {
+      if (isENOENT(err)) return
+      logger.warn(
+        { err, projectId, userId, buildId, shard },
+        'copy history-resync.json.gz for clsi-cache failed'
       )
     })
 
@@ -233,22 +256,36 @@ function notifyCLSICacheAboutBuild({
  * @param {string} opts.projectId
  * @param {string} opts.userId
  * @param {string} opts.buildId
+ * @return {Promise<void>}
+ */
+async function copyHistorySnapshot({ projectId, userId, buildId }) {
+  const src = Path.join(
+    Settings.path.clsiCacheDir,
+    userId ? `${projectId}-${userId}` : projectId,
+    'history.json.gz'
+  )
+  const outputDir = getOutputDir({ projectId, userId, buildId })
+  const dst = Path.join(outputDir, 'history-resync.json.gz')
+  await fs.promises.cp(src, dst)
+}
+/**
+ * @param {Object} opts
+ * @param {string} opts.projectId
+ * @param {string} opts.userId
+ * @param {string} opts.buildId
  * @param {[{path: string}]} opts.outputFiles
  * @return {Promise<void>}
  */
 async function buildTarball({ projectId, userId, buildId, outputFiles }) {
   const timer = new Metrics.Timer('clsi_cache_build', 1, {}, TIMING_BUCKETS)
-  const outputDir = Path.join(
-    Settings.path.outputDir,
-    userId ? `${projectId}-${userId}` : projectId,
-    CACHE_SUBDIR,
-    buildId
-  )
+  const outputDir = getOutputDir({ projectId, userId, buildId })
 
   const files = outputFiles.filter(f => !isExtraneousFile(f.path))
   if (files.length > MAX_ENTRIES_IN_OUTPUT_TAR) {
     Metrics.inc('clsi_cache_build_too_many_entries')
-    throw new Error('too many output files for output.tar.gz')
+    throw new OError('too many output files for output.tar.gz', {
+      nFiles: files.length,
+    })
   }
   Metrics.count('clsi_cache_build_files', files.length)
 
@@ -284,29 +321,53 @@ async function downloadOutputDotSynctexFromCompileCache(
   buildId,
   outputDir
 ) {
+  const requestPath = `/project/${projectId}/${
+    userId ? `user/${userId}/` : ''
+  }build/${editorId}-${buildId}/search/output/output.synctex.gz`
+  return await downloadSingleFile(projectId, requestPath, outputDir, 'synctex')
+}
+
+/**
+ * @param {string} projectId
+ * @param {string} userId
+ * @param {string} cacheDir
+ * @return {Promise<boolean>}
+ */
+async function downloadHistorySnapshot(projectId, userId, cacheDir) {
+  const requestPath = `/project/${projectId}/${
+    userId ? `user/${userId}/` : ''
+  }latest/output/history-resync.json.gz`
+  return await downloadSingleFile(projectId, requestPath, cacheDir, 'snapshot')
+}
+
+/**
+ * @param {string} projectId
+ * @param {string} requestPath
+ * @param {string} outputDir
+ * @param {string} label
+ * @return {Promise<boolean>}
+ */
+async function downloadSingleFile(projectId, requestPath, outputDir, label) {
   if (!Settings.apis.clsiCache.enabled) return false
   if (!OBJECT_ID_REGEX.test(projectId)) return false
   const shardCfg = getAvailableShard(projectId)
   if (!shardCfg) return false
-  const { url } = shardCfg
+  const { url, shard } = shardCfg
 
   const timer = new Metrics.Timer(
     'clsi_cache_download',
     1,
-    { method: 'synctex' },
+    { method: label },
     TIMING_BUCKETS
   )
+  const u = new URL(url)
+  u.pathname = requestPath
   let stream
   try {
-    stream = await fetchStream(
-      `${url}/project/${projectId}/${
-        userId ? `user/${userId}/` : ''
-      }build/${editorId}-${buildId}/search/output/output.synctex.gz`,
-      {
-        method: 'GET',
-        signal: AbortSignal.timeout(TIMEOUT),
-      }
-    )
+    stream = await fetchStream(u, {
+      method: 'GET',
+      signal: AbortSignal.timeout(TIMEOUT),
+    })
   } catch (err) {
     if (err instanceof RequestFailedError && err.response.status === 404) {
       closeCircuitBreaker(url)
@@ -315,26 +376,28 @@ async function downloadOutputDotSynctexFromCompileCache(
     }
     tripCircuitBreaker(url)
     timer.done({ status: 'error' })
-    throw err
+    throw OError.tag(err, 'download failed', { shard })
   }
   await fs.promises.mkdir(outputDir, { recursive: true })
-  const dst = Path.join(outputDir, 'output.synctex.gz')
+  const name = Path.basename(requestPath)
+  const dst = Path.join(outputDir, name)
   const tmp = dst + crypto.randomUUID()
   try {
     await pipeline(
       stream,
       new MeteredStream(Metrics, 'clsi_cache_egress', {
-        path: 'output.synctex.gz',
+        path: name,
       }),
       fs.createWriteStream(tmp)
     )
     await fs.promises.rename(tmp, dst)
   } catch (err) {
+    if (isENOENT(err)) return false
     tripCircuitBreaker(url)
     try {
       await fs.promises.unlink(tmp)
     } catch {}
-    throw err
+    throw OError.tag(err, 'stream failed', { shard })
   }
   closeCircuitBreaker(url)
   timer.done({ status: 'success' })
@@ -352,7 +415,7 @@ async function downloadLatestCompileCache(projectId, userId, compileDir) {
   if (!OBJECT_ID_REGEX.test(projectId)) return false
   const shardCfg = getAvailableShard(projectId)
   if (!shardCfg) return false
-  const { url } = shardCfg
+  const { url, shard } = shardCfg
 
   const timer = new Metrics.Timer(
     'clsi_cache_download',
@@ -379,7 +442,7 @@ async function downloadLatestCompileCache(projectId, userId, compileDir) {
     }
     tripCircuitBreaker(url)
     timer.done({ status: 'error' })
-    throw err
+    throw OError.tag(err, 'download failed', { shard })
   }
   let n = 0
   let abort = false
@@ -423,8 +486,9 @@ async function downloadLatestCompileCache(projectId, userId, compileDir) {
       })
     )
   } catch (err) {
+    if (isENOENT(err)) return false
     tripCircuitBreaker(url)
-    throw err
+    throw OError.tag(err, 'stream failed', { shard })
   }
   closeCircuitBreaker(url)
   Metrics.count('clsi_cache_download_entries', n)
@@ -432,8 +496,33 @@ async function downloadLatestCompileCache(projectId, userId, compileDir) {
   return !abort
 }
 
+/**
+ * @param {Object} opts
+ * @param {string} opts.projectId
+ * @param {string} opts.userId
+ * @param {string} opts.buildId
+ * @return {string}
+ */
+function getOutputDir({ projectId, userId, buildId }) {
+  return Path.join(
+    Settings.path.outputDir,
+    userId ? `${projectId}-${userId}` : projectId,
+    CACHE_SUBDIR,
+    buildId
+  )
+}
+
+/**
+ * @param {unknown} err
+ * @return {boolean}
+ */
+function isENOENT(err) {
+  return err instanceof Error && 'code' in err && err.code === 'ENOENT'
+}
+
 export default {
   notifyCLSICacheAboutBuild,
   downloadLatestCompileCache,
+  downloadHistorySnapshot,
   downloadOutputDotSynctexFromCompileCache,
 }

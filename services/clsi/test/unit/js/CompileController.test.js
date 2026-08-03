@@ -25,6 +25,9 @@ describe('CompileController', () => {
           clsi: {
             url: 'http://clsi.example.com',
             outputUrlPrefix: '/zone/b',
+            instanceType: 'c4d',
+            zone: 'b',
+            isSpotInstance: true,
             downloadHost: 'http://localhost:3013',
           },
           clsiCache: {
@@ -82,12 +85,12 @@ describe('CompileController', () => {
           path: 'output.pdf',
           type: 'pdf',
           size: 1337,
-          build: 1234,
+          build: '1234-5678',
         },
         {
           path: 'output.log',
           type: 'log',
-          build: 1234,
+          build: '1234-5678',
         },
       ]
       ctx.RequestParser.parse = sinon.stub().callsArgWith(1, null, ctx.request)
@@ -144,10 +147,14 @@ describe('CompileController', () => {
               buildId: ctx.buildId,
               outputUrlPrefix: '/zone/b',
               outputFiles: ctx.output_files.map(file => ({
-                url: `${ctx.Settings.apis.clsi.url}/project/${ctx.project_id}/build/${file.build}/output/${file.path}`,
+                url: `${ctx.Settings.apis.clsi.downloadHost}/project/${ctx.project_id}/build/${file.build}/output/${file.path}`,
                 ...file,
               })),
               clsiCacheShard: undefined,
+              baseHistoryVersion: undefined,
+              instanceType: 'c4d',
+              zone: 'b',
+              isSpotInstance: true,
             },
           })
           .should.equal(true)
@@ -172,10 +179,14 @@ describe('CompileController', () => {
               buildId: ctx.buildId,
               outputUrlPrefix: '',
               outputFiles: ctx.output_files.map(file => ({
-                url: `${ctx.Settings.apis.clsi.url}/project/${ctx.project_id}/build/${file.build}/output/${file.path}`,
+                url: `${ctx.Settings.apis.clsi.downloadHost}/project/${ctx.project_id}/build/${file.build}/output/${file.path}`,
                 ...file,
               })),
               clsiCacheShard: undefined,
+              baseHistoryVersion: undefined,
+              instanceType: 'c4d',
+              zone: 'b',
+              isSpotInstance: true,
             },
           })
           .should.equal(true)
@@ -188,12 +199,12 @@ describe('CompileController', () => {
           {
             path: 'fake_output.pdf',
             type: 'pdf',
-            build: 1234,
+            build: '1234-5678',
           },
           {
             path: 'output.log',
             type: 'log',
-            build: 1234,
+            build: '1234-5678',
           },
         ]
         ctx.CompileManager.doCompileWithLock = sinon
@@ -220,10 +231,14 @@ describe('CompileController', () => {
             outputUrlPrefix: '/zone/b',
             buildId: ctx.buildId,
             outputFiles: ctx.output_files.map(file => ({
-              url: `${ctx.Settings.apis.clsi.url}/project/${ctx.project_id}/build/${file.build}/output/${file.path}`,
+              url: `${ctx.Settings.apis.clsi.downloadHost}/project/${ctx.project_id}/build/${file.build}/output/${file.path}`,
               ...file,
             })),
             clsiCacheShard: undefined,
+            baseHistoryVersion: undefined,
+            instanceType: 'c4d',
+            zone: 'b',
+            isSpotInstance: true,
           },
         })
       })
@@ -236,12 +251,12 @@ describe('CompileController', () => {
             path: 'output.pdf',
             type: 'pdf',
             size: 0,
-            build: 1234,
+            build: '1234-5678',
           },
           {
             path: 'output.log',
             type: 'log',
-            build: 1234,
+            build: '1234-5678',
           },
         ]
         ctx.CompileManager.doCompileWithLock = sinon
@@ -268,10 +283,14 @@ describe('CompileController', () => {
             timings: ctx.timings,
             outputUrlPrefix: '/zone/b',
             outputFiles: ctx.output_files.map(file => ({
-              url: `${ctx.Settings.apis.clsi.url}/project/${ctx.project_id}/build/${file.build}/output/${file.path}`,
+              url: `${ctx.Settings.apis.clsi.downloadHost}/project/${ctx.project_id}/build/${file.build}/output/${file.path}`,
               ...file,
             })),
             clsiCacheShard: undefined,
+            baseHistoryVersion: undefined,
+            instanceType: 'c4d',
+            zone: 'b',
+            isSpotInstance: true,
           },
         })
       })
@@ -304,6 +323,10 @@ describe('CompileController', () => {
               stats: ctx.stats,
               timings: ctx.timings,
               clsiCacheShard: undefined,
+              baseHistoryVersion: undefined,
+              instanceType: 'c4d',
+              zone: 'b',
+              isSpotInstance: true,
             },
           })
           .should.equal(true)
@@ -339,6 +362,10 @@ describe('CompileController', () => {
               // JSON.stringify will omit these undefined values
               buildId: undefined,
               clsiCacheShard: undefined,
+              baseHistoryVersion: undefined,
+              instanceType: 'c4d',
+              zone: 'b',
+              isSpotInstance: true,
             },
           })
           .should.equal(true)
@@ -373,6 +400,10 @@ describe('CompileController', () => {
               // JSON.stringify will omit these undefined values
               buildId: undefined,
               clsiCacheShard: undefined,
+              baseHistoryVersion: undefined,
+              instanceType: 'c4d',
+              zone: 'b',
+              isSpotInstance: true,
             },
           })
           .should.equal(true)
@@ -405,6 +436,10 @@ describe('CompileController', () => {
               // JSON.stringify will omit these undefined values
               buildId: undefined,
               clsiCacheShard: undefined,
+              baseHistoryVersion: undefined,
+              instanceType: 'c4d',
+              zone: 'b',
+              isSpotInstance: true,
             },
           })
           .should.equal(true)

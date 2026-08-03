@@ -2,6 +2,7 @@ import SubscriptionGroupHandler from './SubscriptionGroupHandler.mjs'
 
 import OError from '@overleaf/o-error'
 import logger from '@overleaf/logger'
+import Settings from '@overleaf/settings'
 import SubscriptionLocator from './SubscriptionLocator.mjs'
 import SessionManager from '../Authentication/SessionManager.mjs'
 import UserAuditLogHandler from '../User/UserAuditLogHandler.mjs'
@@ -312,7 +313,7 @@ async function submitForm(req, res) {
   const userId = SessionManager.getLoggedInUserId(req.session)
   const userEmail = await UserGetter.promises.getUserEmail(userId)
 
-  const { paymentProviderSubscription } =
+  const { paymentProviderSubscription, subscription } =
     await SubscriptionGroupHandler.promises.getUsersGroupSubscriptionDetails(
       userId
     )
@@ -327,8 +328,18 @@ async function submitForm(req, res) {
   const messageLines = [`\n**Overleaf Sales Contact Form:**`]
   messageLines.push('**Subject:** Self-Serve Group User Increase Request')
   messageLines.push(`**Estimated Number of Users:** ${adding}`)
+  messageLines.push(
+    `**Subscription:** [${subscription._id}](${Settings.adminUrl}/admin/subscription/${subscription._id})`
+  )
+  messageLines.push(`**Current Number of Seats:** ${subscription.membersLimit}`)
+  messageLines.push(`**Plan Code:** ${subscription.planCode}`)
   if (poNumber) {
     messageLines.push(`**PO Number:** ${poNumber}`)
+  }
+  if (subscription.salesforce_id) {
+    messageLines.push(
+      `**Salesforce ID:** [${subscription.salesforce_id}](https://digitalscience.lightning.force.com/lightning/r/Opportunity/${subscription.salesforce_id}/view)`
+    )
   }
   messageLines.push(
     `**Message:** This email has been generated on behalf of user with email **${userEmail}** ` +

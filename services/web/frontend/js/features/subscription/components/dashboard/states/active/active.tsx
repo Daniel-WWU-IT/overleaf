@@ -56,13 +56,11 @@ export function ActiveSubscription({
   if (onStandalonePlan) {
     planName = 'Overleaf Free'
     if (institutionMemberships && institutionMemberships.length > 0) {
-      planName = 'Overleaf Professional'
+      planName = 'Overleaf Commons'
     }
     if (memberGroupSubscriptions.length > 0) {
-      if (
-        memberGroupSubscriptions.some(s => s.planLevelName === 'Professional')
-      ) {
-        planName = 'Overleaf Professional'
+      if (memberGroupSubscriptions.some(s => s.planLevelName === 'Pro')) {
+        planName = 'Overleaf Pro'
       } else {
         planName = 'Overleaf Standard'
       }
@@ -285,7 +283,6 @@ export function ActiveSubscription({
           cancelPauseReq={cancelPauseReq}
         />
       )}
-      <hr />
       <AddOns
         subscription={subscription}
         onStandalonePlan={onStandalonePlan}

@@ -36,7 +36,7 @@ import _ from 'lodash'
 
 class RecurlyClientWithErrorHandling extends recurly.Client {
   /**
-   * @param {import('recurly/lib/recurly/Http').Response} response
+   * @param {any} response
    * @return {Error | null}
    * @private
    */
@@ -78,6 +78,9 @@ async function getAccountForUserId(userId) {
   }
 }
 
+/**
+ * @param {any} userId
+ */
 async function createAccountForUserId(userId) {
   const user = await UserGetter.promises.getUser(userId, {
     _id: 1,
@@ -345,6 +348,7 @@ async function _reapplyPendingChangeAfterImmediateUpdate(
   )
 
   // Merge: start with pending add-ons, add any new add-ons from immediate update
+  /** @type {Record<string, any>} */
   const mergedAddOns = { ...preUpdatePendingAddOns }
   for (const [code, details] of Object.entries(postUpdateAddOns)) {
     // include any add-ons that were added via immediate update just now
@@ -446,20 +450,32 @@ async function previewSubscriptionChange(changeRequest) {
   }
 }
 
+/**
+ * @param {any} subscriptionId
+ */
 async function removeSubscriptionChange(subscriptionId) {
   const removed = await client.removeSubscriptionChange(subscriptionId)
   logger.debug({ subscriptionId }, 'removed pending subscription change')
   return removed
 }
 
+/**
+ * @param {any} subscriptionUuid
+ */
 async function removeSubscriptionChangeByUuid(subscriptionUuid) {
   return await removeSubscriptionChange('uuid-' + subscriptionUuid)
 }
 
+/**
+ * @param {any} subscriptionUuid
+ */
 async function reactivateSubscriptionByUuid(subscriptionUuid) {
   return await client.reactivateSubscription('uuid-' + subscriptionUuid)
 }
 
+/**
+ * @param {any} subscriptionUuid
+ */
 async function cancelSubscriptionByUuid(subscriptionUuid) {
   try {
     return await client.cancelSubscription('uuid-' + subscriptionUuid)
@@ -493,12 +509,19 @@ async function cancelSubscriptionByUuid(subscriptionUuid) {
   }
 }
 
+/**
+ * @param {any} subscriptionUuid
+ * @param {any} pauseCycles
+ */
 async function pauseSubscriptionByUuid(subscriptionUuid, pauseCycles) {
   return await client.pauseSubscription('uuid-' + subscriptionUuid, {
     remainingPauseCycles: pauseCycles,
   })
 }
 
+/**
+ * @param {any} subscriptionUuid
+ */
 async function resumeSubscriptionByUuid(subscriptionUuid) {
   return await client.resumeSubscription('uuid-' + subscriptionUuid)
 }
@@ -552,6 +575,9 @@ async function getPlan(planCode) {
   return planFromApi(plan)
 }
 
+/**
+ * @param {any} subscription
+ */
 function subscriptionIsCanceledOrExpired(subscription) {
   const state = subscription?.recurlyStatus?.state
   return state === 'canceled' || state === 'expired'
@@ -885,37 +911,8 @@ function subscriptionUpdateRequestToApi(updateRequest) {
 }
 
 /**
- * Retrieves a list of failed invoices for a given Recurly subscription ID.
- *
- * @async
- * @function
- * @param {string} subscriptionId - The ID of the Recurly subscription to fetch failed invoices for.
- * @returns {Promise<Array<recurly.Invoice>>} A promise that resolves to an array of failed invoice objects.
+ * @param {any} subscriptionUuid
  */
-async function getPastDueInvoices(subscriptionId) {
-  const failed = []
-  const invoices = client.listSubscriptionInvoices(`uuid-${subscriptionId}`, {
-    params: { state: 'past_due' },
-  })
-
-  for await (const invoice of invoices.each()) {
-    failed.push(invoice)
-  }
-  return failed
-}
-
-/**
- * Marks an invoice as failed using the Recurly client.
- *
- * @async
- * @function failInvoice
- * @param {string} invoiceId - The ID of the invoice to be marked as failed.
- * @returns {Promise<void>} Resolves when the invoice has been successfully marked as failed.
- */
-async function failInvoice(invoiceId) {
-  await client.markInvoiceFailed(invoiceId)
-}
-
 async function terminateSubscriptionByUuid(subscriptionUuid) {
   const subscription = await client.terminateSubscription(
     'uuid-' + subscriptionUuid,
@@ -952,8 +949,6 @@ export default {
   subscriptionIsCanceledOrExpired,
   pauseSubscriptionByUuid: callbackify(pauseSubscriptionByUuid),
   resumeSubscriptionByUuid: callbackify(resumeSubscriptionByUuid),
-  getPastDueInvoices: callbackify(getPastDueInvoices),
-  failInvoice: callbackify(failInvoice),
   terminateSubscriptionByUuid: callbackify(terminateSubscriptionByUuid),
 
   promises: {
@@ -975,8 +970,6 @@ export default {
     getPaymentMethod,
     getAddOn,
     getPlan,
-    getPastDueInvoices,
-    failInvoice,
     terminateSubscriptionByUuid,
   },
 }

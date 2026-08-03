@@ -4,6 +4,7 @@ import {
   Tooltip,
   TooltipView,
   keymap,
+  ViewPlugin,
 } from '@codemirror/view'
 import {
   Extension,
@@ -12,8 +13,13 @@ import {
   TransactionSpec,
   EditorSelection,
   Prec,
+  Annotation,
 } from '@codemirror/state'
 import { closeAllContextMenusEffect } from '../utils/close-all-context-menus-effect'
+import { isContextMenuMouseEvent } from '../utils/context-menu-mouse-event'
+import { isMobileDevice } from '../utils/isMobileDevice'
+
+const isMobile = isMobileDevice()
 
 export const openContextMenuEffect = StateEffect.define<{
   pos: number
@@ -22,6 +28,8 @@ export const openContextMenuEffect = StateEffect.define<{
 }>()
 
 export const closeContextMenuEffect = StateEffect.define()
+
+export const openContextMenuAnnotation = Annotation.define<boolean>()
 
 type ContextMenuState = {
   tooltip: Tooltip | null
@@ -145,13 +153,11 @@ function isPositionInsideSelection(pos: number, from: number, to: number) {
 
 function isPositionInsideAnyRangeOrCursor(view: EditorView, pos: number) {
   for (const range of view.state.selection.ranges) {
-    // If it's a cursor, treat a right-click anywhere on the same line as "inside".
-    // This avoids collapsing multi-cursor selections when right-clicking on blank lines
-    // or to the right of the caret.
+    // If it's a cursor (not a selection), only treat it as "inside" when
+    // right-clicking exactly on the cursor position. This allows cursor
+    // movement when clicking elsewhere on the same line.
     if (range.from === range.to) {
-      const clickedLine = view.state.doc.lineAt(pos)
-      const cursorLine = view.state.doc.lineAt(range.from)
-      if (clickedLine.number === cursorLine.number) {
+      if (pos === range.from) {
         return true
       }
       continue
@@ -200,6 +206,7 @@ function openContextMenuAtPosition(
         y: clientY,
       }),
     ],
+    annotations: [openContextMenuAnnotation.of(true)],
   })
 }
 
@@ -238,7 +245,11 @@ const gutterContextMenuPlugin = (): Extension =>
     gutters.setAttribute('data-context-menu-attached', 'true')
     gutters.addEventListener('contextmenu', (event: Event) => {
       const mouseEvent = event as MouseEvent
-      event.preventDefault()
+
+      if (mouseEvent.shiftKey) {
+        update.view.dispatch({ effects: closeAllContextMenusEffect.of(null) })
+        return
+      }
 
       const pos = update.view.posAtCoords({
         x: mouseEvent.clientX,
@@ -247,6 +258,8 @@ const gutterContextMenuPlugin = (): Extension =>
       if (pos === null) {
         return
       }
+
+      event.preventDefault()
 
       const selection = selectEntireLine(update.view, pos)
       if (selection) {
@@ -261,16 +274,64 @@ const gutterContextMenuPlugin = (): Extension =>
     })
   })
 
+// Handle right-click on ol-cm-filler (empty line widget)
+// domEventHandlers doesn't fire for contenteditable="false" elements, so we use a direct DOM listener
+const emptyLineFillerContextMenuPlugin = (): Extension =>
+  ViewPlugin.define(view => {
+    const contentDOM = view.contentDOM
+
+    const handleContextMenu = (event: Event) => {
+      const mouseEvent = event as MouseEvent
+      const target = mouseEvent.target as HTMLElement
+
+      // Only handle ol-cm-filler elements
+      if (!target.classList.contains('ol-cm-filler')) {
+        return
+      }
+
+      if (mouseEvent.shiftKey) {
+        view.dispatch({ effects: closeAllContextMenusEffect.of(null) })
+        return
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      // Re-dispatch on contentDOM so CodeMirror's domEventHandlers picks it up
+      const customEvent = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        clientX: mouseEvent.clientX,
+        clientY: mouseEvent.clientY,
+        shiftKey: mouseEvent.shiftKey,
+      })
+      contentDOM.dispatchEvent(customEvent)
+    }
+
+    contentDOM.addEventListener('contextmenu', handleContextMenu)
+
+    return {
+      destroy() {
+        contentDOM.removeEventListener('contextmenu', handleContextMenu)
+      },
+    }
+  })
+
 // Editor view context menu handlers
 const editorContextMenuHandlers = (): Extension =>
   EditorView.domEventHandlers({
     contextmenu(event: MouseEvent, view: EditorView) {
-      event.preventDefault()
+      if (event.shiftKey) {
+        view.dispatch({ effects: closeAllContextMenusEffect.of(null) })
+        return false
+      }
 
       const pos = view.posAtCoords({ x: event.clientX, y: event.clientY })
       if (pos === null) {
         return false
       }
+
+      event.preventDefault()
 
       const clickedInsideSelection = isPositionInsideAnyRangeOrCursor(view, pos)
 
@@ -295,15 +356,16 @@ const editorContextMenuHandlers = (): Extension =>
     mousedown(event: MouseEvent, view: EditorView) {
       const target = event.target as HTMLElement
       const isGutter = isClickOnGutter(target)
-      const isRightClick = event.button === 2 || event.ctrlKey
+      const isRightClick = isContextMenuMouseEvent(event)
 
       // Close menu on any click except right-click on non-gutter
       if (!isRightClick || isGutter) {
         closeContextMenu(view)
       }
 
-      // Prevent default on right-click to preserve selection
-      if (isRightClick) {
+      // Prevent default on right-click to preserve selection,
+      // but not when Shift is held (native context menu shortcut)
+      if (isRightClick && !event.shiftKey) {
         event.preventDefault()
         return true
       }
@@ -335,11 +397,12 @@ const contextMenuKeymap = (): Extension =>
   )
 
 export const contextMenu = (enabled: boolean): Extension =>
-  enabled
+  enabled && !isMobile
     ? [
         contextMenuContainerTheme,
         contextMenuStateField,
         gutterContextMenuPlugin(),
+        emptyLineFillerContextMenuPlugin(),
         editorContextMenuHandlers(),
         contextMenuKeymap(),
       ]

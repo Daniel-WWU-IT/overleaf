@@ -40,7 +40,7 @@ From the monorepo root:
 make install
 
 # manually
-bin/npm -w services/web run 'lezer-latex:generate'
+bin/yarn -w services/web run 'lezer-latex:generate'
 ```
 
 ## Tests
@@ -65,7 +65,7 @@ some example files in the test suite, at `web/test/unit/src/LezerLatex/examples/
 For example:
 
 ```sh
-bin/npm -w services/web run 'lezer-latex:run'  web/test/unit/src/LezerLatex/examples/amsmath.tex
+bin/yarn -w services/web run 'lezer-latex:run'  web/test/unit/src/LezerLatex/examples/amsmath.tex
 ```
 
 If you omit the file path, the default file (`examples/demo.tex`) will be run.

@@ -684,4 +684,5 @@ OutputCacheManager.promises = {
     OutputCacheManager.saveOutputFilesInBuildDir
   ),
   queueDirOperation,
+  generateBuildId: promisify(OutputCacheManager.generateBuildId),
 }

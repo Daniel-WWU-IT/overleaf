@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/react'
+import { Meta, StoryObj } from '@storybook/react-webpack5'
 import OLButton from '@/shared/components/ol/ol-button'
 import { ButtonProps } from '@/shared/components/types/button-props'
 

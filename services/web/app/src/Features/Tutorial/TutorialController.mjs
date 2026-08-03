@@ -13,7 +13,7 @@ const VALID_KEYS = [
   'history-restore-promo',
   'us-gov-banner',
   'us-gov-banner-fedramp',
-  'editor-popup-ux-survey',
+  'editor-popup-ux-survey-03-2026',
   'wf-features-moved',
   'review-mode',
   'new-error-logs-promo',
@@ -28,9 +28,10 @@ const VALID_KEYS = [
   'new-editor-opt-in',
   'new-editor-intro',
   'new-editor-intro-2',
-  'old-editor-warning-tooltip',
-  'old-editor-warning-tooltip-2',
   'workbench-rail-popover',
+  'themed-dashboard-intro',
+  'dimensions-consent',
+  'dimensions-rail-popover',
 ]
 
 async function completeTutorial(req, res, next) {

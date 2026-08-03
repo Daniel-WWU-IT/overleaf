@@ -41,6 +41,86 @@ describe('FileTree Context Menu Flow', function () {
     cy.findByRole('menu')
   })
 
+  it('should not open on Shift+right-click', function () {
+    const rootFolder = [
+      {
+        _id: 'root-folder-id',
+        name: 'rootFolder',
+        docs: [{ _id: '456def', name: 'main.tex' }],
+        folders: [],
+        fileRefs: [],
+      },
+    ]
+
+    cy.mount(
+      <EditorProviders
+        rootFolder={rootFolder as any}
+        projectId="123abc"
+        rootDocId="456def"
+      >
+        <FileTreeRoot
+          refProviders={{}}
+          setRefProviderEnabled={cy.stub()}
+          setStartedFreeTrial={cy.stub()}
+          onSelect={cy.stub()}
+          onInit={cy.stub()}
+          isConnected
+        />
+      </EditorProviders>
+    )
+
+    cy.findByRole('menu').should('not.exist')
+    cy.findByRole('treeitem', { name: 'main.tex' }).trigger('contextmenu', {
+      button: 2,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+      force: true,
+    })
+    cy.findByRole('menu').should('not.exist')
+  })
+
+  it('should close an already-open menu on Shift+right-click', function () {
+    const rootFolder = [
+      {
+        _id: 'root-folder-id',
+        name: 'rootFolder',
+        docs: [{ _id: '456def', name: 'main.tex' }],
+        folders: [],
+        fileRefs: [],
+      },
+    ]
+
+    cy.mount(
+      <EditorProviders
+        rootFolder={rootFolder as any}
+        projectId="123abc"
+        rootDocId="456def"
+      >
+        <FileTreeRoot
+          refProviders={{}}
+          setRefProviderEnabled={cy.stub()}
+          setStartedFreeTrial={cy.stub()}
+          onSelect={cy.stub()}
+          onInit={cy.stub()}
+          isConnected
+        />
+      </EditorProviders>
+    )
+
+    cy.findByRole('treeitem', { name: 'main.tex' }).trigger('contextmenu')
+    cy.findByRole('menu').should('exist')
+
+    cy.findByRole('treeitem', { name: 'main.tex' }).trigger('contextmenu', {
+      button: 2,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+      force: true,
+    })
+    cy.findByRole('menu').should('not.exist')
+  })
+
   it('closes when a new selection is started', function () {
     const rootFolder = [
       {

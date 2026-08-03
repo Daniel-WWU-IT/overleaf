@@ -2,6 +2,8 @@ import {
   createNewFile,
   createProjectAndOpenInNewEditor,
   openProjectById,
+  openProjectByName,
+  shareProjectByEmailAndAcceptInviteViaDash,
   testNewFileUpload,
 } from './helpers/project'
 import { isExcludedBySharding, startWith } from './helpers/config'
@@ -44,6 +46,7 @@ describe('editor', function () {
       cy.log(`change project language to '${lng}'`)
       cy.findByRole('button', { name: 'Settings' }).click()
       cy.findByRole('dialog').within(() => {
+        cy.findByRole('tab', { name: 'Spelling and language' }).click()
         cy.findByLabelText('Spellcheck language').select(lng)
       })
       cy.get('body').type('{esc}')
@@ -76,6 +79,7 @@ describe('editor', function () {
       cy.log('remove word from dictionary')
       cy.findByRole('button', { name: 'Settings' }).click()
       cy.findByRole('dialog').within(() => {
+        cy.findByRole('tab', { name: 'Spelling and language' }).click()
         cy.findByLabelText('Dictionary').click()
       })
       cy.findByTestId('dictionary-modal').within(() => {
@@ -140,6 +144,7 @@ describe('editor', function () {
   describe('file menu', function () {
     it('can download project sources', function () {
       cy.findByRole('button', { name: 'File' }).click()
+      cy.findByRole('menuitem', { name: 'Download' }).click()
       cy.findByRole('menuitem', { name: 'Download as source (.zip)' }).click()
       const zipName = projectName.replaceAll('-', '_')
       cy.task('readFileInZip', {
@@ -156,6 +161,7 @@ describe('editor', function () {
       )
 
       cy.findByRole('button', { name: 'File' }).click()
+      cy.findByRole('menuitem', { name: 'Download' }).click()
       cy.findByRole('menuitem', { name: 'Download as PDF' }).click()
       const pdfName = projectName.replaceAll('-', '_')
       cy.task('readPdf', `cypress/downloads/${pdfName}.pdf`).should(
@@ -294,6 +300,144 @@ describe('editor', function () {
         }).should('be.visible')
       })
     })
+  })
+
+  describe('theming', function () {
+    it('can change overall theme in settings menu', function () {
+      cy.findByRole('button', { name: 'Settings' }).click()
+      cy.findByRole('dialog').within(() => {
+        cy.findByRole('tab', { name: 'Appearance' }).click()
+        cy.findByLabelText('Overall theme').select('Dark')
+      })
+      cy.get('body').should('have.attr', 'data-theme', 'default')
+      cy.get('body').type('{esc}')
+
+      cy.findByRole('button', { name: 'Settings' }).click()
+      cy.findByRole('dialog').within(() => {
+        cy.findByRole('tab', { name: 'Appearance' }).click()
+        cy.findByLabelText('Overall theme').select('Light')
+      })
+      cy.get('body').should('have.attr', 'data-theme', 'light')
+      cy.get('body').type('{esc}')
+    })
+  })
+})
+
+describe('editing mode', function () {
+  if (isExcludedBySharding('PRO_DEFAULT_1')) return
+  startWith({ pro: true })
+
+  const OWNER = USER
+  const EDITOR = COLLABORATOR
+  const REVIEWER = 'reviewer@example.com'
+  const VIEWER = 'viewer@example.com'
+  ensureUserExists({ email: OWNER })
+  ensureUserExists({ email: EDITOR })
+  ensureUserExists({ email: REVIEWER })
+  ensureUserExists({ email: VIEWER })
+
+  let projectName: string
+
+  function openEditingModeMenu() {
+    cy.findByRole('button', { name: 'View' }).click()
+    cy.findByRole('menuitem', { name: 'Editing mode' }).click()
+  }
+
+  beforeWithReRunOnTestRetry(() => {
+    projectName = `project-${uuid()}`
+    login(OWNER)
+    createProjectAndOpenInNewEditor(projectName, { type: 'Example project' })
+
+    shareProjectByEmailAndAcceptInviteViaDash(
+      projectName,
+      EDITOR,
+      'Editor',
+      true
+    )
+    login(OWNER)
+    shareProjectByEmailAndAcceptInviteViaDash(
+      projectName,
+      REVIEWER,
+      'Reviewer',
+      true
+    )
+    login(OWNER)
+    shareProjectByEmailAndAcceptInviteViaDash(
+      projectName,
+      VIEWER,
+      'Viewer',
+      true
+    )
+  })
+
+  it('lets an editor switch between editing and reviewing', function () {
+    login(EDITOR)
+    openProjectByName(projectName, true)
+
+    openEditingModeMenu()
+    cy.findByRole('menuitem', { name: 'Editing' })
+      .should('have.attr', 'aria-selected', 'true')
+      .and('not.have.attr', 'aria-disabled')
+    cy.findByRole('menuitem', { name: 'Reviewing' })
+      .should('have.attr', 'aria-selected', 'false')
+      .and('not.have.attr', 'aria-disabled')
+    cy.findByRole('menuitem', { name: 'Viewing' }).should('not.exist')
+
+    cy.findByRole('menuitem', { name: 'Reviewing' }).click()
+    cy.findByRole('button', { name: 'Reviewing' }).should('exist')
+
+    openEditingModeMenu()
+    cy.findByRole('menuitem', { name: 'Reviewing' }).should(
+      'have.attr',
+      'aria-selected',
+      'true'
+    )
+    cy.findByRole('menuitem', { name: 'Editing' }).should(
+      'have.attr',
+      'aria-selected',
+      'false'
+    )
+
+    cy.findByRole('menuitem', { name: 'Editing' }).click()
+    cy.findByRole('button', { name: 'Editing' }).should('exist')
+  })
+
+  it('shows a reviewer in reviewing mode with editing disabled', function () {
+    login(REVIEWER)
+    openProjectByName(projectName, true)
+
+    openEditingModeMenu()
+    cy.findByRole('menuitem', { name: 'Reviewing' })
+      .should('have.attr', 'aria-selected', 'true')
+      .and('not.have.attr', 'aria-disabled')
+    cy.findByRole('menuitem', { name: 'Editing' }).should(
+      'have.attr',
+      'aria-disabled',
+      'true'
+    )
+    cy.findByRole('menuitem', { name: 'Viewing' }).should('not.exist')
+  })
+
+  it('shows a viewer in viewing mode with editing and reviewing disabled', function () {
+    login(VIEWER)
+    openProjectByName(projectName, true)
+
+    openEditingModeMenu()
+    cy.findByRole('menuitem', { name: 'Viewing' }).should(
+      'have.attr',
+      'aria-selected',
+      'true'
+    )
+    cy.findByRole('menuitem', { name: 'Editing' }).should(
+      'have.attr',
+      'aria-disabled',
+      'true'
+    )
+    cy.findByRole('menuitem', { name: 'Reviewing' }).should(
+      'have.attr',
+      'aria-disabled',
+      'true'
+    )
   })
 })
 

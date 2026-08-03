@@ -7,12 +7,12 @@ volumes:
 
 services:
   test_unit:
-    image: ci/$PROJECT_NAME:$BRANCH_NAME-$BUILD_NUMBER
+    image: ci/$PROJECT_NAME:$BRANCH_NAME_TAG_SAFE-$BUILD_NUMBER
     user: node
     volumes:
       - ./reports:/overleaf/services/filestore/reports
       - ../../tsconfig.backend.json:/overleaf/tsconfig.backend.json
-    command: npm run test:unit:_run
+    command: yarn run test:unit:_run
     environment:
       CI:
       MONGO_CONNECTION_STRING: mongodb://mongo/test-overleaf
@@ -21,10 +21,10 @@ services:
       VITEST_NO_CACHE: true
 
   test_acceptance:
-    build: .
-    image: ci/$PROJECT_NAME:$BRANCH_NAME-$BUILD_NUMBER
+    image: ci/$PROJECT_NAME:$BRANCH_NAME_TAG_SAFE-$BUILD_NUMBER
     environment:
       CI:
+      RETRIES:
       MONGO_HOST: mongo
       POSTGRES_HOST: postgres
       AWS_S3_ENDPOINT: https://minio:9000
@@ -40,8 +40,8 @@ services:
       MOCHA_GREP: ${MOCHA_GREP}
       NODE_ENV: test
       NODE_OPTIONS: "--unhandled-rejections=strict"
-      ENABLE_CONVERSIONS: "true"
-      USE_PROM_METRICS: "true"
+      ENABLE_CONVERSIONS: true
+      USE_PROM_METRICS: true
       AWS_S3_USER_FILES_STORAGE_CLASS: REDUCED_REDUNDANCY
       AWS_S3_USER_FILES_BUCKET_NAME: fake-user-files
       AWS_S3_USER_FILES_DEK_BUCKET_NAME: fake-user-files-dek
@@ -61,11 +61,11 @@ services:
       gcs:
         condition: service_healthy
     user: node
-    command: npm run test:acceptance
+    command: yarn run test:acceptance
 
   tar:
     build: .
-    image: ci/$PROJECT_NAME:$BRANCH_NAME-$BUILD_NUMBER
+    image: ci/$PROJECT_NAME:$BRANCH_NAME_TAG_SAFE-$BUILD_NUMBER
     volumes:
       - ./:/tmp/build/
     command: tar -czf /tmp/build/build.tar.gz --exclude=build.tar.gz --exclude-vcs .
@@ -74,7 +74,7 @@ services:
   certs:
     build:
       dockerfile_inline: |
-        FROM node:24.13.0
+        FROM node:24.14.1
         RUN wget -O /certgen "https://github.com/minio/certgen/releases/download/v1.3.0/certgen-linux-"`dpkg --print-architecture`
         RUN chmod +x /certgen
     volumes:

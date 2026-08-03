@@ -45,7 +45,7 @@ import {
   ProjectMetadata,
   ProjectUpdate,
 } from '@/shared/context/types/project-metadata'
-import { UserId } from '../../../types/user'
+import { User, UserId } from '../../../types/user'
 import { ProjectCompiler } from '../../../types/project-settings'
 import { ReferencesContext } from '@/features/ide-react/context/references-context'
 import { useEditorAnalytics } from '@/shared/hooks/use-editor-analytics'
@@ -54,6 +54,8 @@ import { UserSettings } from '@ol-types/user-settings'
 import { DetachCompileContext } from '@/shared/context/detach-compile-context'
 import { type CompileContext } from '@/shared/context/local-compile-context'
 import { EditorContext } from '@/shared/context/editor-context'
+import { Cobranding } from '@ol-types/cobranding'
+import { EDITOR_SESSION_ID } from '@/features/pdf-preview/util/metrics'
 
 // these constants can be imported in tests instead of
 // using magic strings
@@ -64,13 +66,18 @@ export const USER_EMAIL = 'testuser@example.com'
 
 const defaultUserSettings = {
   ...defaultSettings,
-  enableNewEditor: false,
-  enableNewEditorLegacy: false,
   referencesSearchMode: 'simple',
 } satisfies UserSettings
 
 export type EditorProvidersProps = {
-  user?: { id: string; email: string; signUpDate?: string }
+  user?: Pick<
+    User,
+    | 'id'
+    | 'email'
+    | 'signUpDate'
+    | 'activeProfessionalGroupSubscriptions'
+    | 'isProfessionalGroupPlan'
+  >
   projectId?: string
   projectName?: string
   projectOwner?: ProjectMetadata['owner']
@@ -139,7 +146,7 @@ const layoutContextDefault = {
   chatIsOpen: true, // false in the application, true in tests
   reviewPanelOpen: false,
   miniReviewPanelVisible: false,
-  leftMenuShown: false,
+  settingsShown: false,
   projectSearchIsOpen: false,
   pdfLayout: 'sideBySide',
   loadingStyleSheet: false,
@@ -192,6 +199,7 @@ export function EditorProviders({
     'dropbox',
     'link-sharing',
   ])
+  window.metaAttributesCache.set('ol-defaultLatexCompiler', 'pdflatex')
 
   const scope = merge(
     {
@@ -267,24 +275,46 @@ export function EditorProviders({
   )
 }
 
-export function makeEditorProvider({ isProjectOwner = true } = {}) {
+export function makeEditorProvider({
+  isProjectOwner = true,
+  cobranding = undefined,
+  renameProject = () => {},
+  isRestrictedTokenMember,
+  hasSuggestionsLeft = false,
+  hasTokensLeft = false,
+  premiumSuggestionResetDate = new Date(),
+  tokenResetDate = new Date(),
+}: {
+  isProjectOwner?: boolean
+  cobranding?: Cobranding
+  renameProject?: () => void
+  isRestrictedTokenMember?: boolean
+  hasSuggestionsLeft?: boolean
+  hasTokensLeft?: boolean
+  premiumSuggestionResetDate?: Date
+  tokenResetDate?: Date
+} = {}) {
   const EditorProvider: FC<PropsWithChildren> = ({ children }) => {
     const value = {
       isProjectOwner,
-      renameProject: () => {},
+      renameProject,
       isPendingEditor: false,
-      deactivateTutorial: () => {},
-      inactiveTutorials: [],
-      currentPopup: null,
-      setCurrentPopup: () => {},
-      hasPremiumSuggestion: false,
-      setHasPremiumSuggestion: () => {},
-      premiumSuggestionResetDate: new Date(),
+      hasSuggestionsLeft,
+      premiumSuggestionResetDate,
+      hasTokensLeft,
+      tokensLeft: 0,
+      setTokensLeft: () => {},
+      tokenResetDate,
+      setTokenResetDate: () => {},
+      suggestionsLeft: 0,
+      setSuggestionsLeft: () => {},
       setPremiumSuggestionResetDate: () => {},
       writefullInstance: null,
       setWritefullInstance: () => {},
-      showUpgradeModal: false,
-      setShowUpgradeModal: () => {},
+      cobranding,
+      isRestrictedTokenMember,
+      upgradeTrackChangesModal: { show: false },
+      setUpgradeTrackChangesModal: () => {},
     }
 
     return (
@@ -457,7 +487,7 @@ const makeLayoutProvider = (
     const [miniReviewPanelVisible, setMiniReviewPanelVisible] = useState(
       layout.miniReviewPanelVisible
     )
-    const [leftMenuShown, setLeftMenuShown] = useState(layout.leftMenuShown)
+    const [settingsShown, setSettingsShown] = useState(layout.settingsShown)
     const [projectSearchIsOpen, setProjectSearchIsOpen] = useState(
       layout.projectSearchIsOpen
     )
@@ -528,7 +558,7 @@ const makeLayoutProvider = (
         detachRole,
         changeLayout,
         chatIsOpen,
-        leftMenuShown,
+        settingsShown,
         openFile,
         pdfLayout,
         pdfPreviewOpen,
@@ -538,7 +568,7 @@ const makeLayoutProvider = (
         miniReviewPanelVisible,
         loadingStyleSheet,
         setChatIsOpen,
-        setLeftMenuShown,
+        setSettingsShown,
         setOpenFile,
         setPdfLayout,
         setReviewPanelOpen,
@@ -549,6 +579,8 @@ const makeLayoutProvider = (
         restoreView,
         handleChangeLayout,
         handleDetach,
+        focusMode: layout.focusMode ?? false,
+        setFocusMode: layout.setFocusMode ?? (() => {}),
       }),
       [
         reattach,
@@ -557,7 +589,7 @@ const makeLayoutProvider = (
         detachRole,
         changeLayout,
         chatIsOpen,
-        leftMenuShown,
+        settingsShown,
         openFile,
         pdfLayout,
         pdfPreviewOpen,
@@ -567,7 +599,7 @@ const makeLayoutProvider = (
         miniReviewPanelVisible,
         loadingStyleSheet,
         setChatIsOpen,
-        setLeftMenuShown,
+        setSettingsShown,
         setOpenFile,
         setPdfLayout,
         setReviewPanelOpen,
@@ -622,6 +654,7 @@ export function makeEditorPropertiesProvider(
     const value = {
       showVisual,
       setShowVisual,
+      showVisualForFile: () => showVisual,
       showSymbolPalette,
       setShowSymbolPalette,
       toggleSymbolPalette,
@@ -749,6 +782,7 @@ const makeDetachCompileProvider = (mockCompileOnLoad: boolean = false) => {
           const params = [
             data.compileGroup && `compileGroup=${data.compileGroup}`,
             data.clsiServerId && `clsiserverid=${data.clsiServerId}`,
+            `editorId=${EDITOR_SESSION_ID}`,
             'popupDownload=true',
           ]
             .filter(Boolean)

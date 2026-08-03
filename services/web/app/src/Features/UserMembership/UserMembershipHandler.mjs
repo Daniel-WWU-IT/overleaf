@@ -8,6 +8,7 @@ import UserGetter from '../User/UserGetter.mjs'
 import UserMembershipErrors from './UserMembershipErrors.mjs'
 import Modules from '../../infrastructure/Modules.mjs'
 import mongoose from '../../infrastructure/Mongoose.mjs'
+import SubscriptionUpdater from '../Subscription/SubscriptionUpdater.mjs'
 
 const { ObjectId } = mongodb
 
@@ -71,6 +72,14 @@ const UserMembershipHandler = {
     }
 
     await addUserToEntity(entity, attribute, user)
+
+    if (
+      entityConfig.modelName === 'Subscription' &&
+      attribute === 'manager_ids'
+    ) {
+      await SubscriptionUpdater.promises.sendGroupRoleUserProperty(user._id)
+    }
+
     return UserMembershipViewModel.build(user)
   },
 
@@ -98,7 +107,16 @@ const UserMembershipHandler = {
       await Modules.promises.hooks.fire('addGroupAuditLogEntry', auditLog)
     }
 
-    return await removeUserFromEntity(entity, attribute, userId)
+    const result = await removeUserFromEntity(entity, attribute, userId)
+
+    if (
+      entityConfig.modelName === 'Subscription' &&
+      attribute === 'manager_ids'
+    ) {
+      await SubscriptionUpdater.promises.sendGroupRoleUserProperty(userId)
+    }
+
+    return result
   },
 }
 
@@ -124,6 +142,20 @@ async function getPopulatedListOfMembers(entity, attributes) {
       user._id.toString() === entity.admin_id.toString()
     ) {
       user.isEntityAdmin = true
+    }
+    if (
+      user?._id &&
+      entity?.manager_ids &&
+      entity.manager_ids.includes(user._id)
+    ) {
+      user.isEntityManager = true
+    }
+    if (
+      user?._id &&
+      entity?.member_ids &&
+      entity.member_ids.includes(user._id)
+    ) {
+      user.isEntityMember = true
     }
   }
 

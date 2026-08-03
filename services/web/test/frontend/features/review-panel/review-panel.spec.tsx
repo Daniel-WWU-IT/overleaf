@@ -205,6 +205,9 @@ describe('<ReviewPanel />', function () {
       </TestContainer>
     )
 
+    // Wait for the editor to be ready before interacting with it
+    cy.get('.cm-content').should('have.css', 'opacity', '1')
+
     // Open the review panel with keyboard shortcut
     cy.findByText('contentLine 0').type('{command}j', { scrollBehavior: false })
     cy.findByText('contentLine 1').type('{ctrl}j', { scrollBehavior: false })
@@ -490,10 +493,10 @@ describe('<ReviewPanel />', function () {
   })
 
   describe('aggregate change entries', function () {
-    // eslint-disable-next-line mocha/no-skipped-tests
+    // eslint-disable-next-line mocha/no-pending-tests
     it.skip('renders changed entries in current file mode', function () {})
 
-    // eslint-disable-next-line mocha/no-skipped-tests
+    // eslint-disable-next-line mocha/no-pending-tests
     it.skip('renders changed entries in overview mode', function () {})
   })
 
@@ -534,6 +537,35 @@ describe('<ReviewPanel />', function () {
         cy.findByRole('button', { name: 'Cancel' }).click({
           scrollBehavior: false,
         })
+      })
+    })
+  })
+
+  describe('add comment tooltip visibility', function () {
+    beforeEach(function () {
+      cy.findByText('contentLine 12').type(
+        '{home}{shift}' + '{rightArrow}'.repeat(6),
+        { scrollBehavior: false }
+      )
+      cy.get('.review-tooltip-menu').should('exist')
+    })
+
+    it('hides the tooltip when clicking a toolbar button', function () {
+      cy.findByRole('button', { name: 'Undo' }).click({ scrollBehavior: false })
+      cy.get('.review-tooltip-menu').should('not.exist')
+    })
+
+    it('hides the tooltip when clicking outside the editor', function () {
+      cy.get('@review-panel').click({ scrollBehavior: false })
+      cy.get('.review-tooltip-menu').should('not.exist')
+    })
+
+    it('keeps the add comment button functional when clicked', function () {
+      cy.get('.review-tooltip-add-comment-button').click({
+        scrollBehavior: false,
+      })
+      cy.get('@review-panel').within(() => {
+        cy.get('.review-panel-add-comment-textarea').should('exist')
       })
     })
   })
@@ -590,6 +622,26 @@ describe('<ReviewPanel />', function () {
         ])
       })
     })
+
+    it('keeps the tooltip visible when cancelling the accept confirmation modal', function () {
+      cy.get('@accept-selected-changes').click({ scrollBehavior: false })
+      cy.findByRole('dialog').within(() => {
+        cy.findByRole('button', { name: 'Cancel' }).click({
+          scrollBehavior: false,
+        })
+      })
+      cy.get('.review-tooltip-menu').should('exist')
+    })
+
+    it('keeps the tooltip visible when cancelling the reject confirmation modal', function () {
+      cy.get('@reject-selected-changes').click({ scrollBehavior: false })
+      cy.findByRole('dialog').within(() => {
+        cy.findByRole('button', { name: 'Cancel' }).click({
+          scrollBehavior: false,
+        })
+      })
+      cy.get('.review-tooltip-menu').should('exist')
+    })
   })
 
   describe('overview mode', function () {
@@ -629,6 +681,69 @@ describe('<ReviewPanel />', function () {
         cy.get('.review-panel-entry').should('exist')
       })
     })
+  })
+})
+
+describe('<ReviewPanel /> review tooltip without write permission', function () {
+  beforeEach(function () {
+    window.metaAttributesCache.set('ol-preventCompileOnLoad', true)
+    cy.interceptEvents()
+    cy.intercept('GET', '/project/*/changes/users', [])
+    cy.intercept('GET', '/project/*/threads', {})
+
+    const changes = [
+      {
+        metadata: {
+          user_id: USER_ID,
+          ts: new Date('2025-01-01T00:00:00.000Z'),
+        },
+        id: 'inserted-op-id',
+        op: { p: 166, t: 'inserted-op-id', i: 'introduction' },
+      },
+      {
+        metadata: {
+          user_id: USER_ID,
+          ts: new Date('2025-01-01T01:00:00.000Z'),
+        },
+        id: 'deleted-op-id',
+        op: { p: 110, t: 'deleted-op-id', d: 'beautiful ' },
+      },
+    ]
+
+    const scope = mockScope(undefined, {
+      docOptions: { rangesOptions: { changes } },
+      permissionsLevel: 'review',
+    })
+    const project = mockProject({
+      projectOwner: { _id: USER_ID },
+      projectFeatures: { trackChanges: true, trackChangesVisible: true },
+    })
+
+    cy.mount(
+      <TestContainer className="rp-size-expanded">
+        <EditorProviders
+          scope={scope}
+          providers={{ ProjectProvider: makeProjectProvider(project) }}
+        >
+          <CodeMirrorEditor />
+        </EditorProviders>
+      </TestContainer>
+    )
+
+    cy.get('.cm-content').should('have.css', 'opacity', '1')
+
+    // Select a deletion and an insertion so the tooltip's bulk actions would appear
+    cy.findByText('\\maketitle').type(
+      '{home}{shift}' + '{downArrow}'.repeat(10),
+      { scrollBehavior: false }
+    )
+  })
+
+  it('shows the comment action but hides accept and reject for a reviewer', function () {
+    cy.get('.review-tooltip-menu').should('exist')
+    cy.get('.review-tooltip-add-comment-button').should('exist')
+    cy.findByLabelText('Accept selected changes').should('not.exist')
+    cy.findByLabelText('Reject selected changes').should('not.exist')
   })
 })
 
@@ -677,7 +792,7 @@ describe('<ReviewPanel /> in mini mode', function () {
       },
     ])
 
-    cy.intercept('GET', '/project/*/threads', threads)
+    cy.intercept('GET', '/project/*/threads', threads).as('loadThreads')
 
     cy.intercept('POST', `/project/*/doc/${docId}/metadata`, {})
 
@@ -695,6 +810,10 @@ describe('<ReviewPanel /> in mini mode', function () {
     )
     // Wait for editor
     cy.get('.cm-content').should('have.css', 'opacity', '1')
+
+    // Wait for the threads to load, since mini mode renders conditionally on
+    // the threads/ranges data being present
+    cy.wait('@loadThreads')
 
     // Toggle the review panel twice to ensure data is loaded
     cy.findByText('contentLine 0').type('{command}jj', {
@@ -833,6 +952,9 @@ describe('<ReviewPanel /> for free users', function () {
       </TestContainer>
     )
 
+    // Wait for the editor to be ready before interacting with it
+    cy.get('.cm-content').should('have.css', 'opacity', '1')
+
     cy.findByLabelText('Editing').click()
     cy.findByRole('menu').within(() => {
       cy.findByText(/Reviewing/).click()
@@ -849,7 +971,7 @@ describe('<ReviewPanel /> for free users', function () {
   it('renders modal', function () {
     mountEditor()
     cy.findByRole('dialog').within(() => {
-      cy.findByText('Upgrade to Review').should('exist')
+      cy.findByText('Upgrade to review').should('exist')
     })
   })
 
@@ -869,7 +991,7 @@ describe('<ReviewPanel /> for free users', function () {
     })
   })
 
-  // eslint-disable-next-line mocha/no-skipped-tests
+  // eslint-disable-next-line mocha/no-pending-tests
   it.skip('opens subscription page after clicking on `try it for free`', function () {})
 
   it('shows `ask project owner to upgrade` message', function () {

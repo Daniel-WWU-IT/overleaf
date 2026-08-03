@@ -7,6 +7,18 @@ const { ObjectId } = Schema
 // See https://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address/574698#574698
 const MAX_EMAIL_LENGTH = 254
 const MAX_NAME_LENGTH = 255
+const refProviderSettingsSchema = {
+  enabled: { type: Boolean, default: true },
+  groups: {
+    type: [
+      {
+        id: { type: String },
+      },
+    ],
+    default: [],
+  },
+  disablePersonalLibrary: { type: Boolean, default: false },
+}
 
 export const UserSchema = new Schema(
   {
@@ -77,7 +89,7 @@ export const UserSchema = new Schema(
     ace: {
       mode: { type: String, default: 'none' },
       theme: { type: String, default: 'textmate' },
-      overallTheme: { type: String, default: '' },
+      overallTheme: { type: String },
       // When overallTheme is `system`, we switch between `lightTheme` and `darkTheme` based on system settings
       // When overallTheme is `light-` or empty, we use the `theme` option.
       lightTheme: { type: String, default: 'textmate' },
@@ -88,17 +100,19 @@ export const UserSchema = new Schema(
       spellCheckLanguage: { type: String, default: 'en' },
       pdfViewer: { type: String, default: 'pdfjs' },
       syntaxValidation: { type: Boolean },
+      previewTabs: { type: Boolean, default: false },
       fontFamily: { type: String },
       lineHeight: { type: String },
       mathPreview: { type: Boolean, default: true },
       breadcrumbs: { type: Boolean, default: true },
+      editorTabs: { type: Boolean, default: true },
+      nonBlinkingCursor: { type: Boolean, default: false },
       referencesSearchMode: { type: String, default: 'advanced' }, // 'advanced' or 'simple'
-      // enableNewEditor is being phased out in favor of enableNewEditorStageFour
-      // when moving the new editor to opt out (stage 4). However, we need to keep the
-      // old field for determining whether to show promotional material to users.
-      enableNewEditor: { type: Boolean },
-      enableNewEditorStageFour: { type: Boolean },
       darkModePdf: { type: Boolean, default: false },
+      floatingMenu: { type: Boolean, default: true },
+      zotero: refProviderSettingsSchema,
+      mendeley: refProviderSettingsSchema,
+      papers: refProviderSettingsSchema,
     },
     features: {
       collaborators: {
@@ -143,6 +157,7 @@ export const UserSchema = new Schema(
         type: Boolean,
         default: false,
       },
+      aiUsageQuota: { type: String, default: 'basic' },
     },
     featuresOverrides: [
       {
@@ -155,7 +170,9 @@ export const UserSchema = new Schema(
         expiresAt: { type: Date },
         note: { type: String },
         features: {
+          // todo: quota clean-up: remove aiErrorAssistant
           aiErrorAssistant: { type: Boolean },
+          aiUsageQuota: { type: String },
           collaborators: { type: Number },
           versioning: { type: Boolean },
           dropbox: { type: Boolean },
@@ -193,17 +210,18 @@ export const UserSchema = new Schema(
       papers: Schema.Types.Mixed,
     },
     writefull: {
-      enabled: { type: Boolean, default: null },
+      // whether we have attached an autocreated account or autoloading for the user
+      initialized: { type: Boolean, default: false },
       autoCreatedAccount: { type: Boolean, default: false },
       isPremium: { type: Boolean, default: false },
       premiumSource: { type: String, default: null },
     },
-    aiErrorAssistant: {
+    aiFeatures: {
       enabled: { type: Boolean, default: true },
     },
     alphaProgram: { type: Boolean, default: false }, // experimental features
     betaProgram: { type: Boolean, default: false },
-    labsProgram: { type: Boolean, default: false },
+    labsProgram: { type: Boolean, default: false, required: true },
     labsExperiments: { type: Array, default: [] },
     overleaf: {
       id: { type: Number },
@@ -221,11 +239,15 @@ export const UserSchema = new Schema(
     },
     onboardingEmailSentAt: { type: Date },
     splitTests: Schema.Types.Mixed,
-    analyticsId: { type: String },
+    analyticsId: { type: String, required: true },
     completedTutorials: Schema.Types.Mixed,
     suspended: { type: Boolean },
     dsMobileApp: {
       subscribed: { type: Boolean },
+    },
+    stripeCustomerIds: {
+      us: { type: String },
+      uk: { type: String },
     },
   },
   { minimize: false }

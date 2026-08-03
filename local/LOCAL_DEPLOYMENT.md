@@ -50,7 +50,7 @@ All these steps only need to be done once. **Note**: The Nextcloud setup needs t
 
 1. After logging in to Nextcloud as `admin`, go to the _Apps_ settings section. Under _Disabled apps_, locate _Overleaf Nextcloud Integration_ and enable it.
 2. Open the _Administration settings_ and go to the _Overleaf_ section. Enter the following settings:
-   - **Overleaf URL**: `https://overleaf.nextcloud.dev.local/`
+   - **Overleaf URL**: `https://overleaf.nextcloud.dev.local`
    - **API key**: `F18KiFG6gStOav5UzdH9eIke7taCSqGx`
 
 It's advisable to make sure that the settings have been saved by reloading the page. You are now ready to use Overleaf in Nextcloud on a local deployment!
