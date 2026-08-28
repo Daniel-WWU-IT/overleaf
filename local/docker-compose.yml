@@ -64,7 +64,7 @@ services:
             - ./.data/redis:/data
 
     nextcloud:
-        image: nextcloud:33
+        image: nextcloud:34
         container_name: nextcloud
         expose:
             - "80"
