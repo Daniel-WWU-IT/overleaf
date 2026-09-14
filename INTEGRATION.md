@@ -50,6 +50,8 @@
         proxy_send_timeout 10m;
     }
     ```
+- #### Update `server-ce/config/settings.js` as follows:
+  - Change the line `module.exports.projectInviteEncryptorOptions = {` (around line #312) to `settings.projectInviteEncryptorOptions = {` to fix the assignment of Overleaf's new invite token secret; this is a temporary fix until their official fix has been included
 - #### **OPTIONAL |** Apply dark mode changes:
   - Copy the dark mode stylesheet `services/web/frontend/stylsheets/dark-style.scss` into the same location
   - Add the following line at the very end of `services/web/frontend/stylsheets/main-style.scss` to include the dark mode changes:
