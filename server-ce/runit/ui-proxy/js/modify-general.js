@@ -7,6 +7,11 @@ function adjustFooterItems() {
     footerLnk.attr("target", "_blank")
   }
 
+  const footerCopyright = $("p[class='copyright-notice']");
+  if (footerCopyright.length > 0) {
+    footerCopyright.hide();
+  }
+
   const navMainDiv = $("div[class='project-ds-nav-main']");
   if (navMainDiv.length > 0) {
     navMainDiv.css("min-height", "calc(100vh - 7.5rem)");

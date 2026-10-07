@@ -1,4 +1,10 @@
-# Overleaf Nextcloud Integration - v2.1.0
+# Overleaf Nextcloud Integration - v2.2.0
+
+## Overleaf base
+The following commit has been used as the base for the Overleaf integration:
+```
+e039ad26c5bf5422eb57b89fc7e57c75055e631d
+```
 
 ## Changes applied to Overleaf
 - #### **OPTIONAL |** Build custom base image to use the full Texlive distribution by applying the following changes to `server-ce/Dockerfile-base`:
@@ -50,8 +56,6 @@
         proxy_send_timeout 10m;
     }
     ```
-- #### Update `server-ce/config/settings.js` as follows:
-  - Change the line `module.exports.projectInviteEncryptorOptions = {` (around line #312) to `settings.projectInviteEncryptorOptions = {` to fix the assignment of Overleaf's new invite token secret; this is a temporary fix until their official fix has been included
 - #### **OPTIONAL |** Apply dark mode changes:
   - Copy the dark mode stylesheet `services/web/frontend/stylsheets/dark-style.scss` into the same location
   - Add the following line at the very end of `services/web/frontend/stylsheets/main-style.scss` to include the dark mode changes:
@@ -93,4 +97,4 @@ The `regsvc` service can be configured by setting various environment variables:
 The directory `local` contains files to run a local deployment alongside a Nextcloud. The `makefile` located in the project root directory can be used to build and run this deployment. Before using this, though, read the instructions in[`LOCAL_DEPLOYMENT.md`](local/LOCAL_DEPLOYMENT.md) carefully, as it will _not_ work out-of-the-box!
 
 ### Changelog
-A changelog can be found [in the Overleaf Integration App repository](https://github.com/Daniel-WWU-IT/overleaf-nextcloud/blob/v6/CHANGELOG.md).
+A full changelog can be found [here](./CHANGELOG.md).
