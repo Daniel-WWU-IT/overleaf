@@ -1,5 +1,11 @@
 # Overleaf Nextcloud Integration - v2.2.0
 
+## Overleaf base
+The following commit has been used as the base for the Overleaf integration:
+```
+e039ad26c5bf5422eb57b89fc7e57c75055e631d
+```
+
 ## Changes applied to Overleaf
 - #### **OPTIONAL |** Build custom base image to use the full Texlive distribution by applying the following changes to `server-ce/Dockerfile-base`:
     - Set `selected_scheme` to `scheme-full` (located within the TexLive installation block)
@@ -91,4 +97,4 @@ The `regsvc` service can be configured by setting various environment variables:
 The directory `local` contains files to run a local deployment alongside a Nextcloud. The `makefile` located in the project root directory can be used to build and run this deployment. Before using this, though, read the instructions in[`LOCAL_DEPLOYMENT.md`](local/LOCAL_DEPLOYMENT.md) carefully, as it will _not_ work out-of-the-box!
 
 ### Changelog
-A changelog can be found [in the Overleaf Integration App repository](https://github.com/Daniel-WWU-IT/overleaf-nextcloud/blob/v6/CHANGELOG.md).
+A full changelog can be found [here](./CHANGELOG.md).
