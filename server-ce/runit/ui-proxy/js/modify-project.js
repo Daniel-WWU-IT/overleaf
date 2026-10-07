@@ -4,7 +4,7 @@ function showInfoDialog() {
     <div id="info-dialog">
       <div style="font-weight: bold; font-size: 120%; padding-top: 5px; padding-bottom: 5px; margin-bottom: 10px; border-radius: 2px; text-align: center; background-color: rgb(9, 136, 66); color: white;">General Information and Help</div>
       <div style="font-weight: normal; padding-bottom: 5px; text-align: left;">
-          <p style="font-size: 110%;">Welcome to <em>Overleaf</em> in <a href="https://www.sciebo.de" target="_blank">sciebo</a>!</p>
+          <p style="font-size: 110%;">Welcome to <em>Overleaf V6</em> in <a href="https://www.sciebo.de" target="_blank">sciebo</a>!</p>
           <p>If you run into any problems, feel free to contact us! Simply use the button on the main page to open our contact form.</p>
           <p><strong>Please note the following limitations when sharing projects:</strong>
               <ul>
