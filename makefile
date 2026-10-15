@@ -11,7 +11,7 @@ build:
 	cd ./server-ce && make build-base build-community
 
 	@echo "Building Overleaf Integration App..."
-	cd ../overleaf-nextcloud && npm i && npm run build
+	cd ../overleaf-nextcloud && rm -rf build && make build
 
 start:
 	OVERLEAF_BRANCH_NAME=$(GIT_BRANCH) docker compose -f ./local/docker-compose.yml up --no-attach mongo --no-attach redis --no-attach nextcloud --no-attach proxy
