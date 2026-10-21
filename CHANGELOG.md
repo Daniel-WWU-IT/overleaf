@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [V2.3.0] - 2026-10-21
+
+### Changed
+- Rewrote UI in Vue
+
 ## [V2.2.0] - 2026-10-02
 
 ### Changed
