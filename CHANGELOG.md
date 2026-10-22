@@ -2,10 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [V2.3.0] - 2026-10-21
+## [V2.3.0] - 2026-10-22
 
 ### Changed
-- Rewrote UI in Vue
+- Rewrote Nextcloud App in Vue
+
+### Fixed
+- Small UI modification fixes
 
 ## [V2.2.0] - 2026-10-02
 
@@ -15,11 +18,9 @@ All notable changes to this project will be documented in this file.
 ## [V2.1.0] - 2026-07-21
 
 ### Added
-
 - Added license (GNU Affero General Public License)
 
 ### Changed
-
 - Updated to Overleaf 6.2.0
 - Modernized various aspects of the app
 
