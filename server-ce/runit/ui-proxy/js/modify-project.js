@@ -65,24 +65,16 @@ function adjustNavigationItems() {
   if (accName.length > 0) {
     accName.hide();
   }
-  const accSettings = $("li:has(a[href='/user/settings'])");
+
+  const accSettings = $("a[href='/user/settings']").closest("li");
   if (accSettings.length > 0) {
     accSettings.hide();
   }
-  const accLogout = $("li:has(form[id='logOutForm'])");
+
+  const accLogout = $("form[id='logOutForm']").closest("li");
   if (accLogout.length > 0) {
     accLogout.prev()?.attr("style", "display: none !important;");
     accLogout.hide();
-  }
-
-  // Add text to account icon
-  const accIcon = $("div[class='ds-nav-icon-dropdown dropdown']");
-  if (accIcon.length > 0) {
-    accIcon.attr("style", "align-items: center;");
-
-    if (accIcon.find("#account-icon-text").length === 0) {
-      accIcon.append(`<span id="account-icon-text" style="margin-left: 5px;">Account</span>`);
-    }
   }
 
   // Hide the main account button
