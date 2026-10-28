@@ -32,6 +32,7 @@ e039ad26c5bf5422eb57b89fc7e57c75055e631d
         ```
 - #### Copy the new services `server-ce/runit/remote-api-server` and `server-ce/runit/ui-proxy` into the same location
     - Make sure that the `run` files have the executable flag set
+- #### Copy the sandboxed compiler `sandboxed-compiler` into the same location
 - #### Update `server-ce/nginx/overleaf.conf` as follows:
   - Route `GET` requests through the UI proxy by changing the `proxy_pass` option of location `/` to:
     ```
