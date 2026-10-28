@@ -7,6 +7,9 @@ GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 run: build start
 
 build:
+	@echo "Building Overleaf Sandboxed Compiler..."
+	cd ./sandboxed-compiler && make all
+
 	@echo "Building Overleaf..."
 	cd ./server-ce && make build-base build-community
 
