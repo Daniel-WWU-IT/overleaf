@@ -15,8 +15,8 @@ services:
         volumes:
             - ./.data/overleaf:/var/lib/overleaf
         env_file:
-          - ../server-ce/config/integration.env
-          - local.env
+            - ../server-ce/config/integration.env
+            - local.env
         environment:
             OVERLEAF_SITE_URL: 'http://sharelatex'
 
@@ -49,6 +49,18 @@ services:
         container_name: redis
         volumes:
             - redis:/data
+
+    compiler-host:
+        restart: always
+        image: sharelatex/sharelatex-compiler-host:${OVERLEAF_BRANCH_NAME}
+        container_name: compiler-host
+        depends_on:
+            sharelatex:
+                condition: service_started
+        ports:
+            - "6666:6666"
+        environment:
+            TEXLIVE_IMAGE: 'sharelatex/sharelatex-compiler:${OVERLEAF_BRANCH_NAME}'
 
     nextcloud:
         image: nextcloud:34

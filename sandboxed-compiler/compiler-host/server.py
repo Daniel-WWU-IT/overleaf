@@ -55,7 +55,7 @@ def start_compile() -> Response:
         _check_filepath(latexmk_args["infile"])
     except PermissionError as e:
         return Response(str(e), status=HTTPStatus.INTERNAL_SERVER_ERROR)
-    latexmk_args["infile"] = f"\"{latexmk_args["infile"]}\"" '"%s"'
+    latexmk_args["infile"] = f"\"{latexmk_args['infile']}\""
     latexmk = latex_command_template.format_map(latexmk_args)
 
     args = {
