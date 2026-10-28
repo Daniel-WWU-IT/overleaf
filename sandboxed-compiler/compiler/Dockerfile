@@ -1,3 +1,4 @@
+# Simple container with TeX Live and Latexmk. This is used for actually compiling the .tex files.
 FROM ubuntu:plucky
 
 RUN \
