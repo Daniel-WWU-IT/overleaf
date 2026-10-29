@@ -60,6 +60,7 @@ services:
         security_opt:
             - seccomp=unconfined
             - apparmor=unconfined
+        cgroup: host
         depends_on:
             sharelatex:
                 condition: service_started
@@ -67,10 +68,10 @@ services:
             - bash
             - -c
             - |
-              @echo "Loading compiler image..."
+              echo "Loading compiler image..."
               podman load -q -i /tmp/sharelatex-compiler.tar
               podman tag localhost/sandboxed-compiles sharelatex/sharelatex-compiler
-              @echo "Loaded compiler image, starting up..."
+              echo "Loaded compiler image, starting up..."
               gunicorn -w 4 -b 0.0.0.0:6666 --access-logfile=- --error-logfile=- --timeout 600 server:app
         ports:
             - "6666:6666"
