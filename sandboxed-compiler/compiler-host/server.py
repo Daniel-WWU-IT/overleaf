@@ -69,6 +69,7 @@ def start_compile() -> Response:
     command = cmd_template.format_map(args)
 
     try:
+        os.makedirs(latexmk_args["auxdir"], exist_ok=True)
         os.chdir(latexmk_args["auxdir"])
         code, output = subprocess.getstatusoutput(command)
         return Response(output, status=HTTPStatus.OK if code == 0 else HTTPStatus.INTERNAL_SERVER_ERROR)
