@@ -21,8 +21,13 @@ e039ad26c5bf5422eb57b89fc7e57c75055e631d
         RUN apt-get update \
         &&  apt-get install -y python3-flask python3-requests python3-cryptography python3-bs4 python3-lxml python3-gunicorn
         ```
-    - Copy some additional web files by adding the following below the `Copy grunt thin wrapper` block:
+    - Copy some additional files by adding the following below the `Copy grunt thin wrapper` block:
         ```
+        COPY sandboxed-compiler/compiler-runner/compiler_runner.py /usr/local/bin/latexmk
+        RUN chmod +x /usr/local/bin/latexmk
+        COPY sandboxed-compiler/compiler-runner/texcount.pl /usr/local/bin/texcount
+        RUN chmod +x /usr/local/bin/texcount
+
         COPY server-ce/runit/ui-proxy/js/*.js /overleaf/services/web/public/js/ui-proxy/
         COPY server-ce/runit/ui-proxy/css/*.css /overleaf/services/web/public/stylesheets/ui-proxy/
         ```
