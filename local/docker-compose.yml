@@ -25,6 +25,8 @@ services:
             OVERLEAF_REDIS_HOST: 'redis'
             REDIS_HOST: 'redis'
 
+            COMPILER_RUNNER_HOST: 'http://compiler-host:6666/compile'
+
     mongo:
         restart: always
         image: mongo:8.2

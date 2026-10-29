@@ -2,7 +2,7 @@
 import os
 import re
 import sys
-from urllib import request, parse
+from urllib import request, parse, error
 
 
 # Various settings can be overridden via environment variables
@@ -23,6 +23,11 @@ def _check_filepath(fp: str) -> None:
 
 
 def launch_compile_pod() -> None:
+    def _log_error(exc: Exception) -> None:
+        with open("/tmp/runner.error.log", "a") as outfile:
+            outfile.write(f"Error: {exc}\n")
+            sys.exit(1)
+
     compiler = ""
     infile = ""
     auxdir = ""
@@ -39,9 +44,7 @@ def launch_compile_pod() -> None:
     try:
         _check_filepath(infile[len(auxdir) + 1:])
     except PermissionError as e:
-        with open(auxdir + "/output.log", "a") as f:
-            f.write(f"Error: {e}")
-            sys.exit(1)
+        _log_error(e)
 
     args = {
         "compiler": compiler,
@@ -49,8 +52,12 @@ def launch_compile_pod() -> None:
         "auxdir": auxdir,
         "outdir": outdir,
     }
-    with request.urlopen(f"{COMPILEHOST}?{parse.urlencode(args)}", timeout=TIMEOUT) as f:
-        print(f.read().decode("utf-8"))
+    try:
+        with request.urlopen(f"{COMPILEHOST}?{parse.urlencode(args)}", timeout=TIMEOUT) as f:
+            output = f.read().decode("utf-8")
+            print(output)
+    except error.URLError as e:
+        _log_error(e)
 
 
 if __name__ == "__main__":
