@@ -23,4 +23,4 @@ RUN date > /builddate
 
 ADD "server.py" "/server.py"
 
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:6666", "--access-logfile=-", "--error-logfile=-", "--timeout", "600",  "server:app"]
+CMD ["gunicorn", "-w", "4", "-b", "127.0.0.1:6666", "--access-logfile=-", "--error-logfile=-", "--timeout", "600",  "server:app"]
