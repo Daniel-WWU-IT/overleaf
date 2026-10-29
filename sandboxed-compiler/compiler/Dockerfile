@@ -1,6 +1,8 @@
 # Simple container with TeX Live and Latexmk. This is used for actually compiling the .tex files.
 FROM ubuntu:plucky
 
+ARG TEXLIVE_DISTRO="texlive-full"
+
 RUN \
   groupmod -g 1001 www-data; \
   usermod -u 1001 www-data; \
@@ -9,7 +11,7 @@ RUN \
 
 RUN apt-get update \
 &&  apt-get install -y \
-  texlive-full \
+  ${TEXLIVE_DISTRO} \
   python3-pygments \
   libsynctex2 \
   latexmk \
