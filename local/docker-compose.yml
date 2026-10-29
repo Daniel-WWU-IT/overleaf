@@ -61,6 +61,8 @@ services:
                 condition: service_started
         ports:
             - "6666:6666"
+        volumes:
+            - ./.data/overleaf:/var/lib/overleaf
         environment:
             TEXLIVE_IMAGE: 'sharelatex/sharelatex-compiler:${OVERLEAF_BRANCH_NAME}'
 
