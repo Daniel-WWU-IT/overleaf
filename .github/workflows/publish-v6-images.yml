@@ -1,0 +1,31 @@
+name: Build and publish a container image for the 'v6' branch
+on:
+  push:
+    branches:
+      - v6
+    tags:
+      - v*
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      -   name: Checkout repository
+          uses: actions/checkout@v6
+      -   name: Build Overleaf V6 containers
+          run: cd server-ce && make build-base build-community
+      -   name: Build Sandboxed Compiler containers
+          run: cd sandboxed-compiler && make
+      -   name: Log in to registry
+          run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      -   name: Push images
+          run: |
+            VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+            [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+            [ "$VERSION" == "release" ] && VERSION=latest
+            
+            IMAGE_ID=ghcr.io/daniel-wwu-it/overleaf-base
+            docker tag sharelatex/sharelatex-base:latest $IMAGE_ID:$VERSION
+            docker push $IMAGE_ID:$VERSION
