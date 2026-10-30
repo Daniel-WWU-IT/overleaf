@@ -1,4 +1,4 @@
-# Overleaf Nextcloud Integration - v2.2.0
+# Overleaf Nextcloud Integration
 
 ## Overleaf base
 The following commit has been used as the base for the Overleaf integration:
@@ -7,31 +7,25 @@ e039ad26c5bf5422eb57b89fc7e57c75055e631d
 ```
 
 ## Changes applied to Overleaf
-- #### **OPTIONAL |** Build custom base image to use the full Texlive distribution by applying the following changes to `server-ce/Dockerfile-base`:
-    - Set `selected_scheme` to `scheme-full` (located within the TexLive installation block)
-    - Update TexLive by adding this directly after the TexLive installation block:
-      ```
-      RUN tlmgr update --self \
-      &&  tlmgr update --all
-      ```
 - #### Modifications to the main Docker file `server-ce/Dockerfile`:
-    - **OPTIONAL |** Use the custom base image by modifying ARG `OVERLEAF_BASE_TAG` accordingly (see above)
     - Install additional Python modules by adding this directly above the `WORKDIR` directive:
         ```
         RUN apt-get update \
         &&  apt-get install -y python3-flask python3-requests python3-cryptography python3-bs4 python3-lxml python3-gunicorn
         ```
-    - Copy some additional web files by adding the following below the `Copy grunt thin wrapper` block:
+    - Copy some additional files by adding the following below the `Copy grunt thin wrapper` block:
         ```
+        COPY sandboxed-compiler/compiler-runner/compiler_runner.py /usr/local/bin/latexmk
+        RUN chmod +x /usr/local/bin/latexmk
+        COPY sandboxed-compiler/compiler-runner/texcount.pl /usr/local/bin/texcount
+        RUN chmod +x /usr/local/bin/texcount
+
         COPY server-ce/runit/ui-proxy/js/*.js /overleaf/services/web/public/js/ui-proxy/
         COPY server-ce/runit/ui-proxy/css/*.css /overleaf/services/web/public/stylesheets/ui-proxy/
         ```
-    - **OPTIONAL |** To add additional Tex packages, you can use the following command:
-        ```
-        RUN tlmgr install <package>
-        ```
 - #### Copy the new services `server-ce/runit/remote-api-server` and `server-ce/runit/ui-proxy` into the same location
     - Make sure that the `run` files have the executable flag set
+- #### Copy the sandboxed compiler `sandboxed-compiler` into the same location
 - #### Update `server-ce/nginx/overleaf.conf` as follows:
   - Route `GET` requests through the UI proxy by changing the `proxy_pass` option of location `/` to:
     ```

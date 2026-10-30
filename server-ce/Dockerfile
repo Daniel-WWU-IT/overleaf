@@ -3,8 +3,7 @@
 # Overleaf Community Edition (overleaf/overleaf)
 # ---------------------------------------------
 
-# Use a custom base image which provides the "full" TexLive distribution
-ARG OVERLEAF_BASE_TAG=omnivox/overleaf-base:latest
+ARG OVERLEAF_BASE_TAG=sharelatex/sharelatex-base:latest
 FROM $OVERLEAF_BASE_TAG
 
 # Install additional Python modules
@@ -95,12 +94,16 @@ ADD server-ce/bin/grunt /usr/local/bin/grunt
 RUN chmod +x /usr/local/bin/grunt
 
 # Copy UI proxy scripts and stylesheets
+# -------------------------------------
 COPY server-ce/runit/ui-proxy/js/*.js /overleaf/services/web/public/js/ui-proxy/
 COPY server-ce/runit/ui-proxy/css/*.css /overleaf/services/web/public/stylesheets/ui-proxy/
 
-# Add missing TeX packages
-# ------------------------
-# RUN tlmgr install <package>
+# Copy the sandboxed compiler runner
+# ----------------------------------
+COPY sandboxed-compiler/compiler-runner/compiler_runner.py /usr/local/bin/latexmk
+RUN chmod +x /usr/local/bin/latexmk
+COPY sandboxed-compiler/compiler-runner/texcount.pl /usr/local/bin/texcount
+RUN chmod +x /usr/local/bin/texcount
 
 # Copy history helper scripts
 # ---------------------------

@@ -2,7 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [V2.3.0] - 2026-10-22
+## [V2.3.0] - 2026-10-30
+
+### New
+
+- A sandboxed compiler is now used
 
 ### Changed
 - Rewrote Nextcloud App in Vue

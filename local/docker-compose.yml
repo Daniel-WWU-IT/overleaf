@@ -15,8 +15,8 @@ services:
         volumes:
             - ./.data/overleaf:/var/lib/overleaf
         env_file:
-          - ../server-ce/config/integration.env
-          - local.env
+            - ../server-ce/config/integration.env
+            - local.env
         environment:
             OVERLEAF_SITE_URL: 'http://sharelatex'
 
@@ -24,6 +24,8 @@ services:
 
             OVERLEAF_REDIS_HOST: 'redis'
             REDIS_HOST: 'redis'
+
+            COMPILER_HOST: 'http://compiler-host:6666/compile'
 
     mongo:
         restart: always
@@ -49,6 +51,35 @@ services:
         container_name: redis
         volumes:
             - redis:/data
+
+    compiler-host:
+        restart: always
+        image: sharelatex/sharelatex-compiler-host:${OVERLEAF_BRANCH_NAME}
+        container_name: compiler-host
+        privileged: true
+        security_opt:
+            - seccomp=unconfined
+            - apparmor=unconfined
+        cgroup: host
+        depends_on:
+            sharelatex:
+                condition: service_started
+        command:
+            - bash
+            - -c
+            - |
+              echo "Loading compiler image..."
+              podman load -q -i /tmp/sharelatex-compiler.tar
+              podman tag localhost/sandboxed-compiles sharelatex/sharelatex-compiler
+              echo "Loaded compiler image, starting up..."
+              gunicorn -w 4 -b 0.0.0.0:6666 --access-logfile=- --error-logfile=- --timeout 600 server:app
+        ports:
+            - "6666:6666"
+        volumes:
+            - ./.data/overleaf:/var/lib/overleaf
+            - /tmp/sharelatex-compiler.tar:/tmp/sharelatex-compiler.tar
+        environment:
+            TEXLIVE_IMAGE: 'sharelatex/sharelatex-compiler'
 
     nextcloud:
         image: nextcloud:34
