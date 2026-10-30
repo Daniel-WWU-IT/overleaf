@@ -1,4 +1,4 @@
-# Overleaf Nextcloud Integration - v2.2.0
+# Overleaf Nextcloud Integration
 
 ## Overleaf base
 The following commit has been used as the base for the Overleaf integration:
@@ -7,15 +7,7 @@ e039ad26c5bf5422eb57b89fc7e57c75055e631d
 ```
 
 ## Changes applied to Overleaf
-- #### **OPTIONAL |** Build custom base image to use the full Texlive distribution by applying the following changes to `server-ce/Dockerfile-base`:
-    - Set `selected_scheme` to `scheme-full` (located within the TexLive installation block)
-    - Update TexLive by adding this directly after the TexLive installation block:
-      ```
-      RUN tlmgr update --self \
-      &&  tlmgr update --all
-      ```
 - #### Modifications to the main Docker file `server-ce/Dockerfile`:
-    - **OPTIONAL |** Use the custom base image by modifying ARG `OVERLEAF_BASE_TAG` accordingly (see above)
     - Install additional Python modules by adding this directly above the `WORKDIR` directive:
         ```
         RUN apt-get update \
@@ -30,10 +22,6 @@ e039ad26c5bf5422eb57b89fc7e57c75055e631d
 
         COPY server-ce/runit/ui-proxy/js/*.js /overleaf/services/web/public/js/ui-proxy/
         COPY server-ce/runit/ui-proxy/css/*.css /overleaf/services/web/public/stylesheets/ui-proxy/
-        ```
-    - **OPTIONAL |** To add additional Tex packages, you can use the following command:
-        ```
-        RUN tlmgr install <package>
         ```
 - #### Copy the new services `server-ce/runit/remote-api-server` and `server-ce/runit/ui-proxy` into the same location
     - Make sure that the `run` files have the executable flag set

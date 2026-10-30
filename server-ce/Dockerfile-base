@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1-labs
 # --------------------------------------------------
 # Overleaf Base Image (sharelatex/sharelatex-base)
 # --------------------------------------------------
@@ -80,9 +79,6 @@ RUN mkdir /install-tl-unx \
 &&  tlmgr path add \
 &&  rm -rf /install-tl-unx
 
-# Update TexLive
-RUN tlmgr update --self \
-&&  tlmgr update --all
 
 # Set up overleaf user and home directory
 # -----------------------------------------
@@ -92,4 +88,4 @@ RUN adduser --system --group --home /overleaf --no-create-home overleaf && \
 	mkdir -p /var/log/overleaf && \
 	chown www-data:www-data /var/log/overleaf && \
 	mkdir -p /var/lib/overleaf/data/template_files && \
-	chown www-data:www-data /var/lib/overleaf/data/template_files
+	chown www-data:www-data /var/lib/overleaf/data/template_files \

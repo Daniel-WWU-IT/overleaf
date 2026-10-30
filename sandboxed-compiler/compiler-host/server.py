@@ -2,16 +2,23 @@
 import os
 import re
 import subprocess
+import sys
 from http import HTTPStatus
 
 from flask import Flask, request, Response
 
 
 # Various settings can be overridden via environment variables
-TEXLIVE_IMAGE = os.environ.get("COMPILER_HOST_TEXLIVE_IMAGE","docker.io/texlive/texlive:TL2024-historic")
+TEXLIVE_IMAGE = os.environ.get("TEXLIVE_IMAGE","docker.io/texlive/texlive:TL2024-historic")
 UID = os.environ.get("COMPILER_HOST_UID", "33")
 GID = os.environ.get("COMPILER_HOST_GID", "33")
-TIMEOUT = os.environ.get("COMPILER_HOST_TIMEOUT", 600)
+TIMEOUT = os.environ.get("TIMEOUT", 600)
+
+
+def _log_error(exc: Exception) -> None:
+    with open("/tmp/host.error.log", "a") as outfile:
+        outfile.write(f"Error: {exc}\n")
+        sys.exit(1)
 
 
 def _check_filepath(fp: str) -> None:
@@ -42,7 +49,7 @@ def start_compile() -> Response:
     cmd_template += " --rm --network=none {image} {command}"
     latex_command_template = "latexmk -cd -jobname=output"
     latex_command_template += " -auxdir={auxdir} -outdir={outdir} -synctex=1"
-    latex_command_template += " -interaction=\"batchmode\" -f -{compiler} {infile}"
+    latex_command_template += " -interaction=batchmode -f -{compiler} {infile}"
 
     latexmk_args = {
         "compiler": request.args.get("compiler"),
@@ -67,10 +74,11 @@ def start_compile() -> Response:
         "timeout": TIMEOUT,
     }
     command = cmd_template.format_map(args)
-
     try:
         os.chdir(latexmk_args["auxdir"])
         code, output = subprocess.getstatusoutput(command)
+        if code != 0:
+            _log_error(Exception(f"LaTeXMK: [{code}] {output}"))
         return Response(output, status=HTTPStatus.OK if code == 0 else HTTPStatus.INTERNAL_SERVER_ERROR)
     except subprocess.CalledProcessError as e:
         return Response(str(e), status=HTTPStatus.INTERNAL_SERVER_ERROR)

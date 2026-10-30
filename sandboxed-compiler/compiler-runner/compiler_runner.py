@@ -6,9 +6,15 @@ from urllib import request, parse, error
 
 
 # Various settings can be overridden via environment variables
-COMPILEHOST = os.environ.get("COMPILER_RUNNER_HOST", "http://127.0.0.1:6666/compile")
+COMPILER_HOST = os.environ.get("COMPILER_HOST", "http://127.0.0.1:6666/compile")
 COMPILERS = ["-pdf", "-pdfdvi", "-lualatex", "-xelatex"]
-TIMEOUT = os.environ.get("COMPILER_RUNNER_TIMEOUT", 600)
+TIMEOUT = os.environ.get("TIMEOUT", 600)
+
+
+def _log_error(exc: Exception) -> None:
+    with open("/tmp/runner.error.log", "a") as outfile:
+        outfile.write(f"Error: {exc}\n")
+        sys.exit(1)
 
 
 def _check_filepath(fp: str) -> None:
@@ -23,11 +29,6 @@ def _check_filepath(fp: str) -> None:
 
 
 def launch_compile_pod() -> None:
-    def _log_error(exc: Exception) -> None:
-        with open("/tmp/runner.error.log", "a") as outfile:
-            outfile.write(f"Error: {exc}\n")
-            sys.exit(1)
-
     compiler = ""
     infile = ""
     auxdir = ""
@@ -53,7 +54,7 @@ def launch_compile_pod() -> None:
         "outdir": outdir,
     }
     try:
-        with request.urlopen(f"{COMPILEHOST}?{parse.urlencode(args)}", timeout=TIMEOUT) as f:
+        with request.urlopen(f"{COMPILER_HOST}?{parse.urlencode(args)}", timeout=TIMEOUT) as f:
             output = f.read().decode("utf-8")
             print(output)
     except error.URLError as e:

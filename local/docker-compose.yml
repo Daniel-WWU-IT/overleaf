@@ -25,7 +25,7 @@ services:
             OVERLEAF_REDIS_HOST: 'redis'
             REDIS_HOST: 'redis'
 
-            COMPILER_RUNNER_HOST: 'http://compiler-host:6666/compile'
+            COMPILER_HOST: 'http://compiler-host:6666/compile'
 
     mongo:
         restart: always
@@ -79,7 +79,7 @@ services:
             - ./.data/overleaf:/var/lib/overleaf
             - /tmp/sharelatex-compiler.tar:/tmp/sharelatex-compiler.tar
         environment:
-            TEXLIVE_IMAGE: 'sharelatex/sharelatex-compiler:${OVERLEAF_BRANCH_NAME}'
+            TEXLIVE_IMAGE: 'sharelatex/sharelatex-compiler'
 
     nextcloud:
         image: nextcloud:34

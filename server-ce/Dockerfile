@@ -3,8 +3,7 @@
 # Overleaf Community Edition (overleaf/overleaf)
 # ---------------------------------------------
 
-# Use a custom base image which provides the "full" TexLive distribution
-ARG OVERLEAF_BASE_TAG=omnivox/overleaf-base:latest
+ARG OVERLEAF_BASE_TAG=sharelatex/sharelatex-base:latest
 FROM $OVERLEAF_BASE_TAG
 
 # Install additional Python modules
