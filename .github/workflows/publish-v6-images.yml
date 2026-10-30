@@ -27,17 +27,17 @@ jobs:
             [ "$VERSION" == "release" ] && VERSION=latest
             
             IMAGE_ID=ghcr.io/daniel-wwu-it/overleaf-base
-            docker tag docker.io/sharelatex/sharelatex-base:latest $IMAGE_ID:$VERSION
+            docker tag docker.io/sharelatex/sharelatex-base:$VERSION $IMAGE_ID:$VERSION
             docker push $IMAGE_ID:$VERSION
             
             IMAGE_ID=ghcr.io/daniel-wwu-it/overleaf
-            docker tag docker.io/sharelatex/sharelatex:latest $IMAGE_ID:$VERSION
+            docker tag docker.io/sharelatex/sharelatex:$VERSION $IMAGE_ID:$VERSION
             docker push $IMAGE_ID:$VERSION
             
             IMAGE_ID=ghcr.io/daniel-wwu-it/overleaf-compiler-host
-            docker tag docker.io/sharelatex/sharelatex-compiler-host:latest $IMAGE_ID:$VERSION
+            docker tag docker.io/sharelatex/sharelatex-compiler-host:$VERSION $IMAGE_ID:$VERSION
             docker push $IMAGE_ID:$VERSION
             
             IMAGE_ID=ghcr.io/daniel-wwu-it/overleaf-compiler
-            docker tag docker.io/sharelatex/sharelatex-compiler:latest $IMAGE_ID:$VERSION
+            docker tag docker.io/sharelatex/sharelatex-compiler:$VERSION $IMAGE_ID:$VERSION
             docker push $IMAGE_ID:$VERSION
