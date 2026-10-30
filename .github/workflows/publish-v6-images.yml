@@ -1,4 +1,4 @@
-name: Build and publish a container image for the 'v6' branch
+name: Build and publish container images for the 'v6' branch
 on:
   push:
     branches:
@@ -6,7 +6,7 @@ on:
     tags:
       - v*
 jobs:
-  build-and-push-image:
+  build-and-push-images:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,5 +27,17 @@ jobs:
             [ "$VERSION" == "release" ] && VERSION=latest
             
             IMAGE_ID=ghcr.io/daniel-wwu-it/overleaf-base
-            docker tag sharelatex/sharelatex-base:latest $IMAGE_ID:$VERSION
+            docker tag docker.io/sharelatex/sharelatex-base:latest $IMAGE_ID:$VERSION
+            docker push $IMAGE_ID:$VERSION
+            
+            IMAGE_ID=ghcr.io/daniel-wwu-it/overleaf
+            docker tag docker.io/sharelatex/sharelatex:latest $IMAGE_ID:$VERSION
+            docker push $IMAGE_ID:$VERSION
+            
+            IMAGE_ID=ghcr.io/daniel-wwu-it/overleaf-compiler-host
+            docker tag docker.io/sharelatex/sharelatex-compiler-host:latest $IMAGE_ID:$VERSION
+            docker push $IMAGE_ID:$VERSION
+            
+            IMAGE_ID=ghcr.io/daniel-wwu-it/overleaf-compiler
+            docker tag docker.io/sharelatex/sharelatex-compiler:latest $IMAGE_ID:$VERSION
             docker push $IMAGE_ID:$VERSION
