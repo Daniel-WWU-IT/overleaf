@@ -15,7 +15,7 @@ services:
         volumes:
             - ./.data/overleaf:/var/lib/overleaf
         env_file:
-            - ../server-ce/config/integration.env
+            - ../../server-ce/config/integration.env
             - local.env
         environment:
             OVERLEAF_SITE_URL: 'http://sharelatex'
@@ -95,7 +95,7 @@ services:
         volumes:
             - nextcloud:/var/www/html
             - ./.data/custom_apps:/var/www/html/custom_apps
-            - ../../overleaf-nextcloud:/var/www/html/custom_apps/overleafv6_nextcloud
+            - ../../../overleaf-nextcloud:/var/www/html/custom_apps/overleafv6_nextcloud
 
     proxy:
         image: nginx:alpine
