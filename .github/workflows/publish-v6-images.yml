@@ -24,7 +24,7 @@ jobs:
           run: |
             VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
             [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-            [ "$VERSION" == "release" ] && VERSION=latest
+            [ "$VERSION" == "v6" ] && VERSION=latest
             
             IMAGE_ID=ghcr.io/daniel-wwu-it/overleaf-base
             docker tag docker.io/sharelatex/sharelatex-base:$VERSION $IMAGE_ID:$VERSION
