@@ -1,0 +1,15 @@
+apiVersion: v2
+name: overleaf-v6
+description: A Helm chart for Overleaf V6
+type: application
+
+home: https://github.com/Daniel-WWU-IT/overleaf
+sources:
+  - https://github.com/Daniel-WWU-IT/overleaf
+  - https://github.com/Daniel-WWU-IT/overleaf-nextcloud
+maintainers:
+  - name: Daniel Mueller
+    email: daniel.mueller@uni-muenster.de
+
+version: 3.0.0
+appVersion: 6.3.0
