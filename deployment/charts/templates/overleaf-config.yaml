@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: {{ include "overleafv6.fullname" . }}-config
+    namespace: {{ include "overleafv6.namespace" . }}
+    labels: {{ include "overleafv6.labels" . | nindent 8 }}
+data:
+    # Configurable values
+    OVERLEAF_APP_NAME: {{ .Values.general.appName | default "Overleaf V6" | quote }}
+    REMOTE_API_ALLOWED_CLIENTS: {{ .Values.network.allowedClients | default "*" | quote }}
+
+    # Fixed defaults necessary for the integration to work
+    OVERLEAF_CSP_ENABLED: "false"
+    OVERLEAF_DISABLE_LINK_SHARING: "true"
+    OVERLEAF_RESTRICT_INVITES_TO_EXISTING_ACCOUNTS: "true"
+    EMAIL_CONFIRMATION_DISABLED: "true"
+    ENABLE_CONVERSIONS: "true"
+    ENABLED_LINKED_FILE_TYPES: "project_file,project_output_file"

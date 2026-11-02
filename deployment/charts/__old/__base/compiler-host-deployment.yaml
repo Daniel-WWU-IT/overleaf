@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.35.0 (9532ceef3)
+  labels:
+    io.kompose.service: compiler-host
+  name: compiler-host
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: compiler-host
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert
+        kompose.version: 1.35.0 (9532ceef3)
+      labels:
+        io.kompose.service: compiler-host
+    spec:
+      containers:
+        - args:
+            - bash
+            - -c
+            - |
+              echo "Loading compiler image..."
+              podman load -q -i /tmp/sharelatex-compiler.tar
+              podman tag localhost/ sharelatex/sharelatex-compiler
+              echo "Loaded compiler image, starting up..."
+              gunicorn -w 4 -b 0.0.0.0:6666 --access-logfile=- --error-logfile=- --timeout 600 server:app
+          env:
+            - name: TEXLIVE_IMAGE
+              value: sharelatex/sharelatex-compiler
+          image: 'sharelatex/sharelatex-compiler-host:'
+          name: compiler-host
+          ports:
+            - containerPort: 6666
+              protocol: TCP
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /tmp/sharelatex-compiler.tar
+              name: compiler-host-claim1
+      restartPolicy: Always
+      volumes:
+        - name: compiler-host-claim1
+          persistentVolumeClaim:
+            claimName: compiler-host-claim1

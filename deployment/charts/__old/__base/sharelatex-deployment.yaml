@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.35.0 (9532ceef3)
+  labels:
+    io.kompose.service: sharelatex
+  name: sharelatex
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: sharelatex
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert
+        kompose.version: 1.35.0 (9532ceef3)
+      labels:
+        io.kompose.service: sharelatex
+    spec:
+      containers:
+        - env:
+            - name: COMPILER_HOST
+              value: http://compiler-host:6666/compile
+            - name: DEBUG_INFORMATION
+              valueFrom:
+                configMapKeyRef:
+                  key: DEBUG_INFORMATION
+                  name: local-env
+            - name: DISABLE_UI_PROXY
+              valueFrom:
+                configMapKeyRef:
+                  key: DISABLE_UI_PROXY
+                  name: local-env
+            - name: EMAIL_CONFIRMATION_DISABLED
+              valueFrom:
+                configMapKeyRef:
+                  key: EMAIL_CONFIRMATION_DISABLED
+                  name: integration-env
+            - name: EMAIL_CONFIRMATION_DISABLED
+              valueFrom:
+                configMapKeyRef:
+                  key: EMAIL_CONFIRMATION_DISABLED
+                  name: local-env
+            - name: ENABLED_LINKED_FILE_TYPES
+              valueFrom:
+                configMapKeyRef:
+                  key: ENABLED_LINKED_FILE_TYPES
+                  name: local-env
+            - name: ENABLE_CONVERSIONS
+              valueFrom:
+                configMapKeyRef:
+                  key: ENABLE_CONVERSIONS
+                  name: local-env
+            - name: OVERLEAF_APP_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: OVERLEAF_APP_NAME
+                  name: local-env
+            - name: OVERLEAF_CSP_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  key: OVERLEAF_CSP_ENABLED
+                  name: integration-env
+            - name: OVERLEAF_DISABLE_LINK_SHARING
+              valueFrom:
+                configMapKeyRef:
+                  key: OVERLEAF_DISABLE_LINK_SHARING
+                  name: integration-env
+            - name: OVERLEAF_INVITE_TOKEN_SECRET
+              valueFrom:
+                configMapKeyRef:
+                  key: OVERLEAF_INVITE_TOKEN_SECRET
+                  name: local-env
+            - name: OVERLEAF_MONGO_URL
+              value: mongodb://mongo/sharelatex
+            - name: OVERLEAF_REDIS_HOST
+              value: redis
+            - name: OVERLEAF_RESTRICT_INVITES_TO_EXISTING_ACCOUNTS
+              valueFrom:
+                configMapKeyRef:
+                  key: OVERLEAF_RESTRICT_INVITES_TO_EXISTING_ACCOUNTS
+                  name: integration-env
+            - name: OVERLEAF_SESSION_SECRET
+              valueFrom:
+                configMapKeyRef:
+                  key: OVERLEAF_SESSION_SECRET
+                  name: local-env
+            - name: OVERLEAF_SITE_URL
+              value: http://sharelatex
+            - name: REDIS_HOST
+              value: redis
+            - name: REMOTE_API_ALLOWED_CLIENTS
+              valueFrom:
+                configMapKeyRef:
+                  key: REMOTE_API_ALLOWED_CLIENTS
+                  name: local-env
+            - name: REMOTE_API_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: REMOTE_API_KEY
+                  name: local-env
+            - name: SERVICE_DEBUG_MODE
+              valueFrom:
+                configMapKeyRef:
+                  key: SERVICE_DEBUG_MODE
+                  name: local-env
+          image: 'sharelatex/sharelatex:'
+          name: sharelatex
+          ports:
+            - containerPort: 80
+              protocol: TCP
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 60

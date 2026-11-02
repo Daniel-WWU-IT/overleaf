@@ -1,0 +1,17 @@
+# Overleaf V6 Helm values
+# -----------------------
+#
+# The following values MUST be provided manually:
+#  - network.apiKey
+#
+# All other values usually have reasonable and working defaults.
+
+nameOverride: ""        # Override the application name (defaults to "overleafv6")
+namespace: ""           # Override the application namespace
+
+general:
+    appName: ""         # The display name of the application (defaults to "Overleaf V6")
+
+network:
+    apiKey: ""          # The API key to use; must be provided
+    allowedClients: ""  # Clients that are allowed to connect to the internal API (defaults to any client)
