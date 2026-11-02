@@ -6,22 +6,29 @@
 #
 # All other values usually have reasonable and working defaults.
 
-nameOverride: ""            # Override the application name (defaults to "overleafv6")
-namespace: ""               # Override the application namespace
+nameOverride: ""                # Override the application name (defaults to "overleafv6")
+namespace: ""                   # Override the application namespace
 
 general:
-    appName: ""             # The display name of the application (defaults to "Overleaf V6")
+    appName: ""                 # The display name of the application (defaults to "Overleaf V6")
 
 network:
-    apiKey: "x"              # The API key to use; must be provided
-    allowedClients: ""      # Clients that are allowed to connect to the internal API (defaults to any client)
+    apiKey: ""                  # The API key to use; must be provided
+    allowedClients: ""          # Clients that are allowed to connect to the internal API (defaults to any client)
 
 service:
-    type: ClusterIP         # The type of the Overleaf V6 service (defaults to "ClusterIP")
-    port: 8099              # The port of the Overleaf V6 service (defaults to 8099)
+    type: ClusterIP             # The type of the Overleaf V6 service (defaults to "ClusterIP")
+    port: 8099                  # The port of the Overleaf V6 service (defaults to 8099)
 
 persistence:
     enabled: true               # Whether to use persistency
     storageClass: ""            # The storage class to use (defaults to "standard")
-    accessMode: ReadWriteOnce   # The PVC access mode (defaults to "ReadWriteOnce")
+    accessMode: ReadWriteOnce   # The access mode (defaults to "ReadWriteOnce")
     size: 8Gi                   # The storage size to request (defaults to "8Gi")
+
+ingress:
+    enabled: true               # Whether to use an ingress (defaults to "false")
+    url: ""                     # The URL under which Overleaf V6 can be reached; must be provided if the ingress is enabled
+    hostUrl: ""                 # The URL of the host system in which Overleaf V6 will be integrated; must be provided if the ingress is enabled
+    tls:
+        secretName: ""          # If set, use the specified TLS secret (defaults to "")

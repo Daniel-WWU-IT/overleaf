@@ -1,0 +1,35 @@
+{{ if .Values.ingress.enabled | default false -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: {{ include "overleafv6.fullname" . }}-ingress
+    namespace: {{ include "overleafv6.namespace" . }}
+    labels: {{ include "overleafv6.labels" . | nindent 8 }}
+    annotations:
+        nginx.ingress.kubernetes.io/proxy-body-size: 100m
+        nginx.ingress.kubernetes.io/enable-cors: "true"
+        nginx.ingress.kubernetes.io/cors-allow-origin: {{ required "A host URL for Overleaf V6 must be provided" .Values.ingress.hostUrl | quote }}
+        nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+        nginx.ingress.kubernetes.io/cors-allow-methods: "GET,POST,OPTIONS"
+        nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type"
+        nginx.ingress.kubernetes.io/configuration-snippet: |
+            more_clear_headers "X-Frame-Options";
+spec:
+    tls:
+        - hosts:
+              - {{ required "A URL for Overleaf V6 must be provided" .Values.ingress.url | quote }}
+          {{- if .Values.ingress.tls.secretName }}
+          secretName: {{ .Values.ingress.tls.secretName | quote }}
+          {{- end }}
+    rules:
+        - host: {{ required "A URL for Overleaf V6 must be provided" .Values.ingress.url | quote }}
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: {{ include "overleafv6.fullname" . }}-service
+                            port:
+                                number: 80
+{{- end }}
