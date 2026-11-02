@@ -1,0 +1,5 @@
+apiVersion: v2
+name: sciebo-overleaf
+description: A helm chart for overleaf for sciebo
+version: 2.3.0
+appVersion: 2.3.0

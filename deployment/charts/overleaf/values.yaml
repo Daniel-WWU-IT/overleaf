@@ -1,0 +1,55 @@
+image:
+  repository: "harbor.uni-muenster.de/sciebo-containers/overleaf"
+  tag: "v6-testing"
+  pullPolicy: Always
+
+imagePullSecrets:
+  - name: regcred-harbor
+
+hostURL: overleaf-staging.sciebo.de
+
+env:
+  OVERLEAF_APP_NAME: "Overleaf V6"
+
+  OVERLEAF_MONGO_URL: "mongodb://sharelatex:sharelatex@mongo-mongodb-headless/sharelatex"
+  OVERLEAF_REDIS_HOST: "redis-headless"
+  REDIS_HOST: "redis-headless"
+
+  OVERLEAF_BEHIND_PROXY: "true"
+  OVERLEAF_SESSION_SECRET: "T1PsSGmAwyIVropS7bOr"
+  OVERLEAF_INVITE_TOKEN_SECRET: "d71crKZKnA+1GRpQLUwWg9Y7TWvbOV7hOVZOIe2rZlU="
+  OVERLEAF_STATUS_PAGE_URL: "https://wwuit-sys.zivgitlabpages.uni-muenster.de/sciebo/docs/de/stoerungen/"
+  OVERLEAF_ADMIN_EMAIL: "info@sciebo.de"
+
+  ENABLE_CRON_RESOURCE_DELETION: "true"
+
+  REMOTE_API_KEY: "oxpwuBoD7sYoFVbmD4ZK"
+  REMOTE_API_ALLOWED_CLIENTS: "*"
+
+  ALLOW_MONGO_ADMIN_CHECK_FAILURES: "true"
+
+  SERVICE_DEBUG_MODE: "true"
+  DEBUG_INFORMATION: "true"
+
+compileHost:
+  image:
+    repository: "harbor.uni-muenster.de/sciebo-containers/overleaf-compilehost"
+    tag: "v6-testing"
+    pullPolicy: Always
+  texlive:
+    repository: "harbor.uni-muenster.de/sciebo-containers/overleaf-latex"
+    tag: "v6-testing"
+  url: "http://overleaf-compile:6666/compile"
+  port: 6666
+  timeout: 180
+
+persistence:
+  enabled: true
+  persistentVolumeClaim: overleaf-data
+  mountPath: /var/lib/overleaf
+  hostPath: "/gpfs/sciebo-dss/appbackup/overleaf/staging-input/overleaf-data"
+
+ingress:
+  enabled: true
+  tls:
+    secretName: overleaf-tls

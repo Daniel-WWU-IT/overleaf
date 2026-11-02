@@ -1,0 +1,11 @@
+image:
+  tag: "8.6"
+  pullPolicy: Always
+replicaCount: 0
+persistence:
+  enabled: true
+  storageClass: cephfs
+  accessMode: ReadWriteMany
+  size: 1Gi
+auth:
+  enabled: false

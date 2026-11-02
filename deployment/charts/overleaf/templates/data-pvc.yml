@@ -1,0 +1,14 @@
+{{- if .Values.persistence.enabled }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+    name: overleaf-data
+spec:
+    storageClassName: cephfs
+    accessModes:
+      - ReadWriteMany
+    resources:
+        requests:
+            storage: 64Gi
+{{- end }}
+

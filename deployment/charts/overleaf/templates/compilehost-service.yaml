@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: overleaf-compile
+  # labels:
+  #   app.kubernetes.io/instance: release-name
+  #   app.kubernetes.io/managed-by: Helm
+  #   app.kubernetes.io/name: overleaf
+  #   app.kubernetes.io/version: 2.7.1
+  #   helm.sh/chart: overleaf-3.1.2
+  annotations:
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.compileHost.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: overleaf
+    app.kubernetes.io/instance: overleaf
+    app.kubernetes.io/component: compile
