@@ -70,7 +70,7 @@ services:
             - |
               echo "Loading compiler image..."
               podman load -q -i /tmp/sharelatex-compiler.tar
-              podman tag localhost/sandboxed-compiles sharelatex/sharelatex-compiler
+              podman tag localhost/${OVERLEAF_BRANCH_NAME} sharelatex/sharelatex-compiler
               echo "Loaded compiler image, starting up..."
               gunicorn -w 4 -b 0.0.0.0:6666 --access-logfile=- --error-logfile=- --timeout 600 server:app
         ports:
