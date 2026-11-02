@@ -7,6 +7,9 @@ metadata:
 spec:
     selector:
         {{ include "overleafv6.selectorLabels" . | nindent 8 }}
+    type: {{ .Values.service.type | default "ClusterIP" }}
     ports:
-        -   port: 8099
+        -   protocol: TCP
+            name: http
+            port: {{ .Values.service.port | default 8099 }}
             targetPort: 80
