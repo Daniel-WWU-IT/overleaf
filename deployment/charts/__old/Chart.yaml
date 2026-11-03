@@ -1,5 +1,0 @@
-apiVersion: v2
-name: overleaf-v6
-description: A helm chart for Overleaf V6
-version: 3.0.0
-appVersion: 2.3.0

@@ -46,3 +46,17 @@ mongo:
 
 redis:
     host: ""                    # The Redis host; must be provided
+
+compilerHost:
+    image:
+        repository: ""          # The image repository (defaults to "ghcr.io/daniel-wwu-it/overleaf-compiler-host")
+        tag: ""                 # The image tag (defaults to "latest")
+        pullPolicy: ""          # The image pull policy (defaults to "Always")
+    service:
+        type: ClusterIP         # The type of the CompilerHost service (defaults to "ClusterIP")
+        port: 6666              # The port of the CompilerHost service (defaults to 6666)
+    compiler:
+        image:
+            repository: ""      # The image repository (defaults to "ghcr.io/daniel-wwu-it/overleaf-compiler")
+            tag: ""             # The image tag (defaults to "latest")
+        timeout: 600            # The timeout of the compiler in seconds (defaults to "600")

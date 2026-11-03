@@ -12,7 +12,7 @@ from flask import Flask, request, Response
 TEXLIVE_IMAGE = os.environ.get("TEXLIVE_IMAGE","docker.io/texlive/texlive:TL2024-historic")
 UID = os.environ.get("COMPILER_HOST_UID", "33")
 GID = os.environ.get("COMPILER_HOST_GID", "33")
-TIMEOUT = os.environ.get("TIMEOUT", 600)
+COMPILE_TIMEOUT = os.environ.get("TIMEOUT", 600)
 
 
 def _log_error(exc: Exception) -> None:
@@ -71,7 +71,7 @@ def start_compile() -> Response:
         "image": TEXLIVE_IMAGE,
         "auxdir": latexmk_args["auxdir"],
         "command": latexmk,
-        "timeout": TIMEOUT,
+        "timeout": COMPILE_TIMEOUT,
     }
     command = cmd_template.format_map(args)
     try:

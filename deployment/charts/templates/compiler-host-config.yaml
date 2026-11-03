@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: {{ include "overleafv6.fullname" . }}-compiler-host-config
+    namespace: {{ include "overleafv6.namespace" . }}
+    labels: {{ include "overleafv6.labels" . | nindent 8 }}
+data:
+    # Configurable values
+    TEXLIVE_IMAGE: {{ printf "%s:%s" (.Values.compilerHost.compiler.image.repository | default "ghcr.io/daniel-wwu-it/overleaf-compiler") (.Values.compilerHost.compiler.image.tag | default "latest") | quote }}
+    COMPILE_TIMEOUT: {{ .Values.compilerHost.compiler.timeout | default 600 | quote }}

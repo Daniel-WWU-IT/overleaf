@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+    name: {{ include "overleafv6.fullname" . }}-compiler-host-service
+    namespace: {{ include "overleafv6.namespace" . }}
+    labels: {{ include "overleafv6.labels" . | nindent 8 }}
+spec:
+    selector:
+        {{ include "overleafv6.selectorLabels" . | nindent 8 }}
+    type: {{ .Values.compilerHost.service.type | default "ClusterIP" }}
+    ports:
+        -   protocol: TCP
+            name: "compilerHost"
+            port: {{ .Values.compilerHost.service.port | default 6666 }}
+            targetPort: 6666
