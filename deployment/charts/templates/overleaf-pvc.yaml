@@ -1,0 +1,15 @@
+{{- if .Values.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: {{ include "overleafv6.fullname" . }}-pvc
+    namespace: {{ include "overleafv6.namespace" . }}
+    labels: {{ include "overleafv6.labels" . | nindent 8 }}
+spec:
+    accessModes:
+        - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
+    storageClassName: {{ .Values.persistence.storageClass | default "standard" }}
+    resources:
+        requests:
+            storage: {{ .Values.persistence.size | default "8Gi" }}
+{{- end }}

@@ -1,0 +1,62 @@
+# Overleaf V6 Helm values
+# -----------------------
+#
+# The following values MUST be provided manually:
+#  - network.apiKey
+#  - mongo.host
+#  - redis.host
+#
+# All other values usually have reasonable and working defaults.
+
+nameOverride: ""                # Override the application name (defaults to "overleafv6")
+namespace: ""                   # Override the application namespace
+
+image:
+    repository: ""              # The image repository (defaults to "ghcr.io/daniel-wwu-it/overleaf")
+    tag: ""                     # The image tag (defaults to "latest")
+    pullPolicy: ""              # The image pull policy (defaults to "Always")
+
+general:
+    appName: ""                 # The display name of the application (defaults to "Overleaf V6")
+
+network:
+    apiKey: ""                  # The API key to use; must be provided
+    allowedClients: ""          # Clients that are allowed to connect to the internal API (defaults to any client)
+
+service:
+    type: ClusterIP             # The type of the Overleaf V6 service (defaults to "ClusterIP")
+    port: 8099                  # The port of the Overleaf V6 service (defaults to 8099)
+
+persistence:
+    enabled: true               # Whether to use persistency
+    storageClass: ""            # The storage class to use (defaults to "standard")
+    accessMode: ReadWriteOnce   # The access mode (defaults to "ReadWriteOnce")
+    size: 8Gi                   # The storage size to request (defaults to "8Gi")
+    hostPath: ""                # An optional path to map the data volume onto the host system's FS (defaults to "")
+
+ingress:
+    enabled: true               # Whether to use an ingress (defaults to "false")
+    url: ""                     # The URL under which Overleaf V6 can be reached; must be provided if the ingress is enabled
+    hostUrl: ""                 # The URL of the host system in which Overleaf V6 will be integrated; must be provided if the ingress is enabled
+    tls:
+        secretName: ""          # If set, use the specified TLS secret (defaults to "")
+
+mongo:
+    host: ""                    # The MongoDB host; must be provided
+
+redis:
+    host: ""                    # The Redis host; must be provided
+
+compilerHost:
+    image:
+        repository: ""          # The image repository (defaults to "ghcr.io/daniel-wwu-it/overleaf-compiler-host")
+        tag: ""                 # The image tag (defaults to "latest")
+        pullPolicy: ""          # The image pull policy (defaults to "Always")
+    service:
+        type: ClusterIP         # The type of the CompilerHost service (defaults to "ClusterIP")
+        port: 6666              # The port of the CompilerHost service (defaults to 6666)
+    compiler:
+        image:
+            repository: ""      # The image repository (defaults to "ghcr.io/daniel-wwu-it/overleaf-compiler")
+            tag: ""             # The image tag (defaults to "latest")
+        timeout: 600            # The timeout of the compiler in seconds (defaults to "600")

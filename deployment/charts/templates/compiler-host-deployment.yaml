@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: {{ include "overleafv6.fullname" . }}-compiler-host
+    namespace: {{ include "overleafv6.namespace" . }}
+    labels: {{ include "overleafv6.labels" . | nindent 8 }}
+spec:
+    replicas: 1
+    progressDeadlineSeconds: 600
+    revisionHistoryLimit: 3
+    strategy:
+        type: Recreate
+    selector:
+        matchLabels: {{ include "overleafv6.selectorLabels" . | nindent 12 }}
+    template:
+        metadata:
+            labels: {{ include "overleafv6.selectorLabels" . | nindent 16 }}
+        spec:
+            containers:
+                -   name: {{ include "overleafv6.fullname" . }}-compiler-host
+                    image: {{ printf "%s:%s" (.Values.image.repository | default "ghcr.io/daniel-wwu-it/overleaf-compiler-host") (.Values.image.tag | default "latest") | quote }}
+                    imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
+                    ports:
+                        -   containerPort: 6666
+                            protocol: TCP
+                    securityContext:
+                        readOnlyRootFilesystem: false
+                        privileged: true
+                    command:
+                        -   bash
+                    args:
+                        -   -c
+                        -   |
+                            echo "Pulling compiler image..."
+                            podman pull -q $TEXLIVE_IMAGE
+                            echo "Pulled compiler image, starting up..."
+                            gunicorn -w 4 -b 0.0.0.0:6666 --access-logfile=- --error-logfile=- --timeout $COMPILE_TIMEOUT server:app
+                    volumeMounts:
+                        -   name: {{ include "overleafv6.fullname" . }}-volume
+                            mountPath: "/var/lib/overleaf"
+                        -   name: {{ include "overleafv6.fullname" . }}-containers
+                            mountPath: /var/lib/containers
+                    envFrom:
+                        -   configMapRef:
+                                name: {{ include "overleafv6.fullname" . }}-compiler-host-config
+            restartPolicy: Always
+            volumes:
+                -   name: {{ include "overleafv6.fullname" . }}-volume
+                    persistentVolumeClaim:
+                        claimName: {{ include "overleafv6.fullname" . }}-pvc
+                    {{- if .Values.persistence.hostPath }}
+                    hostPath:
+                        path: {{ .Values.persistence.hostPath }}
+                        type: Directory
+                    {{- end }}
+                -   name: {{ include "overleafv6.fullname" . }}-containers
+                    emptyDir:
+                        medium: Memory

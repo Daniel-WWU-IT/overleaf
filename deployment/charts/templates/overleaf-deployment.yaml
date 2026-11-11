@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: {{ include "overleafv6.fullname" . }}
+    namespace: {{ include "overleafv6.namespace" . }}
+    labels: {{ include "overleafv6.labels" . | nindent 8 }}
+spec:
+    replicas: 1
+    strategy:
+        type: Recreate
+    selector:
+        matchLabels: {{ include "overleafv6.selectorLabels" . | nindent 12 }}
+    template:
+        metadata:
+            labels: {{ include "overleafv6.selectorLabels" . | nindent 16 }}
+        spec:
+            containers:
+                -   name: {{ include "overleafv6.fullname" . }}
+                    image: {{ printf "%s:%s" (.Values.image.repository | default "ghcr.io/daniel-wwu-it/overleaf") (.Values.image.tag | default "latest") | quote }}
+                    imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
+                    ports:
+                        -   containerPort: 80
+                            protocol: TCP
+                    volumeMounts:
+                        -   name: {{ include "overleafv6.fullname" . }}-volume
+                            mountPath: "/var/lib/overleaf"
+                    envFrom:
+                        -   configMapRef:
+                                name: {{ include "overleafv6.fullname" . }}-config
+                        -   secretRef:
+                                name: {{ include "overleafv6.fullname" . }}-config-secret
+                    livenessProbe:
+                        failureThreshold: 3
+                        periodSeconds: 10
+                        successThreshold: 1
+                        tcpSocket:
+                            port: 80
+                        timeoutSeconds: 1
+                    readinessProbe:
+                        failureThreshold: 3
+                        periodSeconds: 10
+                        successThreshold: 1
+                        tcpSocket:
+                            port: 80
+                        timeoutSeconds: 1
+                    startupProbe:
+                        failureThreshold: 30
+                        periodSeconds: 5
+                        successThreshold: 1
+                        tcpSocket:
+                            port: 80
+                        timeoutSeconds: 1
+            restartPolicy: Always
+            terminationGracePeriodSeconds: 60
+            volumes:
+                -   name: {{ include "overleafv6.fullname" . }}-volume
+                    persistentVolumeClaim:
+                        claimName: {{ include "overleafv6.fullname" . }}-pvc
+                    {{- if .Values.persistence.hostPath }}
+                    hostPath:
+                        path: {{ .Values.persistence.hostPath }}
+                        type: Directory
+                    {{- end }}

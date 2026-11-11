@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: {{ include "overleafv6.fullname" . }}-config
+    namespace: {{ include "overleafv6.namespace" . }}
+    labels: {{ include "overleafv6.labels" . | nindent 8 }}
+data:
+    # Configurable values
+    OVERLEAF_APP_NAME: {{ .Values.general.appName | default "Overleaf V6" | quote }}
+    REMOTE_API_ALLOWED_CLIENTS: {{ .Values.network.allowedClients | default "*" | quote }}
+
+    OVERLEAF_MONGO_URL: {{ printf "mongodb://%s/overleaf" (required "A MongoDB host must be provided" .Values.mongo.host) | quote }}
+    OVERLEAF_REDIS_HOST: {{ required "A Redis host must be provided" .Values.redis.host | quote }}
+    REDIS_HOST: {{ required "A Redis host must be provided" .Values.redis.host | quote }}
+
+    # Fixed defaults necessary for the integration to work
+    {{- if .Values.ingress.enabled }}
+    OVERLEAF_SITE_URL: {{ required "A URL for Overleaf V6 must be provided" .Values.ingress.url | quote }}
+    OVERLEAF_BEHIND_PROXY: "true"
+    {{- end }}
+
+    OVERLEAF_CSP_ENABLED: "false"
+    OVERLEAF_DISABLE_LINK_SHARING: "true"
+    OVERLEAF_RESTRICT_INVITES_TO_EXISTING_ACCOUNTS: "true"
+    EMAIL_CONFIRMATION_DISABLED: "true"
+    ENABLE_CONVERSIONS: "true"
+    ENABLED_LINKED_FILE_TYPES: "project_file,project_output_file"
+    ALLOW_MONGO_ADMIN_CHECK_FAILURES: "true"
+    ENABLE_CRON_RESOURCE_DELETION: "true"

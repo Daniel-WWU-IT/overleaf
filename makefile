@@ -22,10 +22,10 @@ start:
 	docker save -o /tmp/sharelatex-compiler.tar sharelatex/sharelatex-compiler:$(BRANCH_NAME_TAG_SAFE)
 
 	@echo "Launching Overleaf..."
-	OVERLEAF_BRANCH_NAME=$(BRANCH_NAME) docker compose -f ./local/docker-compose.yml up --no-attach mongo --no-attach redis --no-attach nextcloud --no-attach proxy
+	OVERLEAF_BRANCH_NAME=$(BRANCH_NAME) docker compose -f ./deployment/local/docker-compose.yml up --no-attach mongo --no-attach redis --no-attach nextcloud --no-attach proxy
 
 	@echo "Shutting down Overleaf..."
-	OVERLEAF_BRANCH_NAME=$(BRANCH_NAME) docker compose -f ./local/docker-compose.yml down
+	OVERLEAF_BRANCH_NAME=$(BRANCH_NAME) docker compose -f ./deployment/local/docker-compose.yml down
 
 	@echo "Cleaning up..."
 	rm -f /tmp/sharelatex-compiler.tar

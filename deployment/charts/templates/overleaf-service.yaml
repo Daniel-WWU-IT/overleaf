@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+    name: {{ include "overleafv6.fullname" . }}-service
+    namespace: {{ include "overleafv6.namespace" . }}
+    labels: {{ include "overleafv6.labels" . | nindent 8 }}
+spec:
+    selector:
+        {{ include "overleafv6.selectorLabels" . | nindent 8 }}
+    type: {{ .Values.service.type | default "ClusterIP" }}
+    ports:
+        -   protocol: TCP
+            name: http
+            port: {{ .Values.service.port | default 8099 }}
+            targetPort: 80
